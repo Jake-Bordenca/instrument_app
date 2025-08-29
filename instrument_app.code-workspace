@@ -4,7 +4,11 @@
 			"path": "."
 		},
 		{
+<<<<<<< Updated upstream
 			"path": "../Personal Repo/Vacuum Connection"
+=======
+			"path": "C:/Users/Johnson Lab/Documents/GitHub/KC-GUI"
+>>>>>>> Stashed changes
 		}
 	],
 	"settings": {}
