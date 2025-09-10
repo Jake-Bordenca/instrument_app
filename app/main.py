@@ -1,4 +1,8 @@
 # instrument_app/app/main.py
+'''
+Adapted from KC's System
+'''
+
 from __future__ import annotations
 
 import sys
@@ -15,8 +19,7 @@ from instrument_app.app.settings_dialog import SettingsDialog
 
 # pages / services
 from instrument_app.pages.pressure_page import PressureInterlockPage
-from instrument_app.pages.cdms_page import CDMSPage
-from instrument_app.theme import style
+from instrument_app.pages.bruker_control_page import BrukerControlPage
 from instrument_app.services.serial_manager import SerialManager
 from instrument_app.services.data_recorder import DataRecorder
 
@@ -60,10 +63,10 @@ class MainWindow(QMainWindow):
 
     def _build_tabs(self):
         self.pressure = PressureInterlockPage(serial=self.serial, recorder=self.recorder)
-        self.cdms = CDMSPage()  # pass daq when ready: CDMSPage(daq=self.ni)
+        self.bruker = BrukerControlPage()
 
         self.tabs.addTab(self.pressure, "Pressures / Interlocks")
-        self.tabs.addTab(self.cdms, "CDMS")
+        self.tabs.addTab(self.bruker, "Bruker Control")
 
     def _build_menu(self):
         mbar = self.menuBar()
@@ -150,8 +153,8 @@ class MainWindow(QMainWindow):
             # give pages a chance to stop threads cleanly
             if hasattr(self.pressure, "close"):
                 self.pressure.close()
-            if hasattr(self.cdms, "close"):
-                self.cdms.close()
+            if hasattr(self.bruker, "close"):
+                self.bruker.close()
         finally:
             super().closeEvent(ev)
 

@@ -31,7 +31,6 @@ import pyqtgraph as pg
 # theming
 from instrument_app.theme.manager import theme_mgr
 from instrument_app.theme.themes import Theme
-#from instrument_app.theme import style  # dynamic proxy (tokens of current theme)
 
 
 # ----------------------------- Optional Pico (safe import) -----------------------------
@@ -142,16 +141,10 @@ class Analyzer(QObject):
 
 # ----------------------------- UI Page ----------------------------------------------
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 class CDMSPage(QWidget):
-    def __init__(self):
     """CDMS tab: AO/DO controls + acquisition source + live table/histogram."""
     def __init__(self, daq: Optional[object] = None):
         super().__init__()
-        lay=QVBoxLayout(self)
-        lay.addWidget(QLabel("CDMS Controls & Acquisition (stub)"))
-        self.btn=QPushButton("Start acquisition")
-        lay.addWidget(self.btn)
         self.daq = daq
 
         # containers for theme restyling

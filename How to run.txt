@@ -1,0 +1,5 @@
+cd "C:\Users\Johnson Lab\Documents\GitHub\MRI GUI"
+
+py -m instrument_app
+
+replace cd with path to instrument_app FOLDER 
