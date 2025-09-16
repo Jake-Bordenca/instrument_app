@@ -1,8 +1,3 @@
-'''
-Taken from Chris's Code
-'''
-
-
 import serial
 import time
 
@@ -24,13 +19,17 @@ class SerialComms():
     def sendCompact(self, message):
         message_bytes = bytes(message, 'ascii')
         message_list = message[0:-6].strip('\r').split(';')
+        checksum = str(hex(self.crc16(message_bytes, 0, len(message_bytes)))).upper()
+        message = message + "@" + checksum[2:] + "\r"
+        message_bytes = bytes(message, 'ascii')
         self.ser.write(message_bytes)
         time.sleep(.015)
         if self.ser.in_waiting > 0:
             data = self.ser.read(self.ser.in_waiting)
             data = data.replace(b'\x00',b'').replace(b'\x06', b'').strip(b'\r').split(b'\r')
             data = [d.decode('ascii') for d in data]
-            result = []
+            results = []
+            responses = []
             for m, d in zip(message_list, data):
                 if m in d:
                     response, checksum = d.split("@")
@@ -38,14 +37,23 @@ class SerialComms():
                     while len(checkchecksum) < 4:
                         checkchecksum = "0" + checkchecksum
                     if checksum == checkchecksum:
-                        result.append(response.split("?")[-1])
+                        if "?" in response:
+                            results.append(response.split("?")[-1])
+                            responses.append(response)
+                        elif "=" in response:
+                            results.append(response.split("=")[-1])
+                            responses.append(response)
                     else:
                         print("Checksum wrong")
                         return None
         else:
             print("No response to command")
             return None
-        return result
+        if len(results) > 0:
+            return results, responses
+        else:
+            print("Response empty")
+            return None, None
         
     @staticmethod
     def crc16(data : bytearray, offset , length):
