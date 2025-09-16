@@ -31,6 +31,7 @@ import pyqtgraph as pg
 # theming
 from instrument_app.theme.manager import theme_mgr
 from instrument_app.theme.themes import Theme
+#from instrument_app.theme import style  # dynamic proxy (tokens of current theme)
 
 
 # ----------------------------- Optional Pico (safe import) -----------------------------

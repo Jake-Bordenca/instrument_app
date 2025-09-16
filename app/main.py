@@ -97,28 +97,52 @@ class MainWindow(QMainWindow):
     # ------------ Theme hook ------------
 
     def _apply_theme(self, t: Theme):
-        """Apply the selected Theme to the whole window."""
-        # Gradients for big surfaces; solid for everything else
-        bg_rule = t.BG
+        """Apply theme QSS + pyqtgraph colors, then nudge pages to restyle."""
+        bg_rule = t.BG_QSS or t.BG
         qss = f"""
             QWidget {{ background:{bg_rule}; color:{t.TXT}; }}
-            QTabWidget::pane {{position: absolute;}}
-            QTabWidget::tab-bar {{left: 15px;}}
-            QTabBar::tab {{background:{t.BTN_BG}; color:{t.TXT};
-                            padding: 6px 12px;
-                            border-top-left-radius: 8px;
-                            border-top-right-radius: 8px; }}
+
+            /* Cards, buttons, tables */
             QGroupBox {{ border:1px solid {t.CARD_BORDER}; border-radius:8px; padding:6px; }}
             QPushButton {{
                 color:{t.TXT}; background:{t.BTN_BG}; border:1px solid {t.BTN_BORDER};
                 padding:6px 10px; border-radius:8px; font:10pt 'Segoe UI';
             }}
             QPushButton:pressed {{ background:{t.BTN_BG_DOWN}; }}
+
             QTableWidget {{ background:{t.CARD_BG}; gridline-color:{t.CARD_BORDER}; }}
             QHeaderView::section {{
                 background:{t.BTN_BG}; color:{t.TXT}; border:1px solid {t.BTN_BORDER};
                 padding:4px; font-weight:600;
             }}
+
+            /* Menus */
+            QMenuBar {{ background:transparent; color:{t.TXT}; }}
+            QMenuBar::item:selected {{ background:{t.BTN_BG_DOWN}; }}
+            QMenu {{ background:{t.CARD_BG}; color:{t.TXT}; border:1px solid {t.CARD_BORDER}; }}
+            QMenu::item:selected {{ background:{t.BTN_BG}; }}
+
+            /* Tabs */
+            QTabWidget::pane {{
+                border:1px solid {t.CARD_BORDER};
+                top:-1px;
+                background:{t.CARD_BG};
+            }}
+            QTabBar::tab {{
+                background:{t.BTN_BG};
+                color:{t.TXT};
+                border:1px solid {t.BTN_BORDER};
+                padding:6px 10px;
+                margin-right:2px;
+                border-top-left-radius:6px;
+                border-top-right-radius:6px;
+            }}
+            QTabBar::tab:selected {{
+                background:{t.CARD_BG};
+                color:{t.TXT_STRONG};
+                border-bottom-color:{t.CARD_BG};
+            }}
+            QTabBar::tab:!selected:hover {{ background:{t.BTN_BG_DOWN}; }}
         """
         self.setStyleSheet(qss)
 
@@ -126,7 +150,7 @@ class MainWindow(QMainWindow):
         pg.setConfigOptions(background=t.PLOT_BG, foreground=t.PLOT_FG)
 
         # Let pages re-apply any per-widget styles they own (optional)
-        for page in (getattr(self, "pressure", None), getattr(self, "cdms", None)):
+        for page in (getattr(self, "pressure", None), getattr(self, "bruker", None)):
             if page and hasattr(page, "_apply_theme_to_self"):
                 page._apply_theme_to_self(t)  # noqa: SLF001 (private helper by convention)
 
@@ -161,7 +185,7 @@ class MainWindow(QMainWindow):
     # ------------ Helpers ------------
 
     def _make_recorder(self):
-        """Construct DataRecorder with a sensible default path, regardless of ctor signature."""
+        #Construct DataRecorder with a sensible default path, regardless of ctor signature.
         logdir = Path.home() / "InstrumentLogs"
         logdir.mkdir(parents=True, exist_ok=True)
         try:
