@@ -21,7 +21,7 @@ class YamlTestPage(QWidget):
             super().__init__()
 
             # Set up serial comms
-            self.ser = SerialComms.SerialComms(instrument = "compact", port = "COM1", baudrate = 115200)
+            self.ser = SerialComms.SerialComms(instrument = "compact", port = "COM3", baudrate = 115200)
 
             # Set up the window
             self.setWindowTitle("Vacuum Monitor")
