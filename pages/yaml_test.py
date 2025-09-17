@@ -1,7 +1,7 @@
 import yaml
 import instrument_app.widgets.Channels as ch
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout,
+    QWidget, QVBoxLayout, QHBoxLayout,
 )
 from PyQt5.QtCore import QTimer
 from instrument_app.util import SerialComms
@@ -26,28 +26,122 @@ class YamlTestPage(QWidget):
             # Set up the window
             self.setWindowTitle("Vacuum Monitor")
             central_widget = QWidget(self)
-            layout = QVBoxLayout(central_widget)
+            root= QHBoxLayout(central_widget)
+            left= QVBoxLayout()
+            right= QVBoxLayout()
+            root.addLayout(left, 0); root.addLayout(right, 1)
 
             # Create the channels
-            widgets = [] 
-            for ch_type, ch_params in config_data.items():
-                for channel, params in ch_params.items():
-                    if isinstance(params, dict): 
-                        if params['type']== 'Numeric':
-                            self.params['name'] = ch.NumericSetting(params['name'], params['group'], self.ser, params['read_command'],params['write_command'],params['default_value'],params['min_value'],params['max_value'],units=params['units'], description=params['description'],)
-                            widgets.append(self.params['name'])                        
-                        else:
-                            pass
-                    else:
-                        pass    
+            channelwidgets = [] 
+            channels = config_data.get('channels', {})
+            for channel, params in channels.items():
+                    if not isinstance(params, dict):
+                        continue  # Skip malformed entries
 
-            # Add each channel's widget to the layout of the main window
-            for i in range(len(widgets)):
-                layout.addWidget(self.params['name'].gui)
-            #self.setCentralWidget(central_widget)
+                    channel_type = params.get('type')
+                    if not channel_type:
+                        continue  # Skip if no type
+
+            # Create an attribute on self with the name of the channel (lowercase)
+                    attr_name = channel.lower()
+
+                    if channel_type == 'Numeric':
+                        widget = ch.NumericSetting(
+                            params['name'],
+                            params['group'],
+                            self.ser,
+                            params['read_command'],
+                            params['write_command'],
+                            params.get('description', ''),
+                            params['default_value'],
+                            params['min_value'],
+                            params['max_value'],
+                            units=params.get('units', ''),
+                        )
+                    elif channel_type == 'Switch':
+                        widget = ch.SwitchSetting(
+                            params['name'],
+                            params.get('description', ''),
+                            params['group'],
+                            self.ser,
+                            params['read_command'],
+                            params['write_command'],
+                            params['options'],
+                            params['default_value'],
+                        )
+                    else:
+                        # Extend here for other types as you implement more classes
+                        continue
+
+                    setattr(self, attr_name, widget)
+                    channelwidgets.append(widget)
+
+                    # Add each widget's GUI to the layout
+                    for widget in channelwidgets:
+                        left.addWidget(widget.gui)
+                    #self.setCentralWidget(central_widget)
+            
+             # Create the channels
+            systemwidgets = [] 
+            system = config_data.get('system', {})
+            for channel, params in system.items():
+                    if not isinstance(params, dict):
+                        continue  # Skip malformed entries
+
+                    channel_type = params.get('type')
+                    if not channel_type:
+                        continue  # Skip if no type
+
+            # Create an attribute on self with the name of the channel (lowercase)
+                    attr_name = channel.lower()
+
+                    if channel_type == 'Numeric':
+                        widget = ch.NumericSetting(
+                            params['name'],
+                            params['group'],
+                            self.ser,
+                            params['read_command'],
+                            params.get('write_command', ''),
+                            params.get('description', ''),
+                            params.get('default_value', 0),
+                            params.get('min_value', 0),
+                            params.get('max_value', 0),
+                            units=params.get('units', '')
+                        )
+
+                    elif channel_type == 'Switch':
+                        widget = ch.SwitchSetting(
+                            params['name'],
+                            params.get('description', ''),
+                            params['group'],
+                            self.ser,
+                            params['read_command'],
+                            params['write_command'],
+                            params['options'],
+                            params['default_value'],
+                        )
+
+                    elif channel_type == 'Turbo':
+                        widget = ch.SwitchSetting(
+                            params['name'],
+                            params.get('description', ''),
+                            params['group'],
+                            self.ser,
+                            params['read_command'],
+                            params['write_command'],
+                        )
+                    else:
+                        # Extend here for other types as you implement more classes
+                        continue
+
+                    setattr(self, attr_name, widget)
+                    systemwidgets.append(widget)
+
+                    # Add each widget's GUI to the layout
+                    for widget in systemwidgets:
+                        right.addWidget(widget.gui)          
+          
 
     def closeEvent(self, event):
                 self.ser.close()
                 event.accept()
-
-#self.V1 = ch.NumericSetting("V1", "Voltages", self.ser, "FOC1:L2V_", "FOC1:L2V_", 10, -40, 40, units="V", description="FOC1:L2V")
