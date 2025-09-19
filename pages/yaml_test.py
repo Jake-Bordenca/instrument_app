@@ -1,12 +1,12 @@
 import yaml
 import instrument_app.widgets.Channels as ch
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
+    QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QSizePolicy
 )
 from PyQt5.QtCore import QTimer
 from instrument_app.util import SerialComms
 
-def load_config(filename="config\setup_Compact.yaml"):
+def load_config(filename="instrument_app\config\setup_Compact.yaml"):
     """
     Loads a YAML configuration file.
     """
@@ -26,13 +26,30 @@ class YamlTestPage(QWidget):
             # Set up the window
             self.setWindowTitle("Vacuum Monitor")
             central_widget = QWidget(self)
-            root= QHBoxLayout(central_widget)
-            left= QVBoxLayout()
-            right= QVBoxLayout()
-            root.addLayout(left, 0); root.addLayout(right, 1)
+            root = QHBoxLayout(central_widget)
 
-            # Create the channels
-            channelwidgets = [] 
+            # Left side (no scroll)
+            left_widget = QWidget()
+            left_layout = QVBoxLayout(left_widget)
+            left_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # Set vertical policy
+
+            # Right scroll area setup
+            right_scroll_area = QScrollArea()
+            right_scroll_widget = QWidget()
+            right_scroll_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # Set vertical policy
+            right_layout = QVBoxLayout(right_scroll_widget)
+            right_scroll_area.setWidget(right_scroll_widget)
+            right_scroll_area.setWidgetResizable(True)
+
+            root.addWidget(left_widget, 0)              # Add left widget (no scroll)
+            root.addWidget(right_scroll_area, 1)        # Add right scrollable area
+
+            # If you want to set the layout of your central widget:
+            self.setLayout(root)
+
+
+             # Create the channels
+            self.channelwidgets = [] 
             channels = config_data.get('channels', {})
             for channel, params in channels.items():
                     if not isinstance(params, dict):
@@ -61,28 +78,26 @@ class YamlTestPage(QWidget):
                     elif channel_type == 'Switch':
                         widget = ch.SwitchSetting(
                             params['name'],
-                            params.get('description', ''),
                             params['group'],
                             self.ser,
-                            params['read_command'],
-                            params['write_command'],
-                            params['options'],
-                            params['default_value'],
+                            set_command= params['read_command'],
+                            description = params.get('description', ''),
+                            options = params.get('options', ''),
+                            default_value = params.get('default_value', ''),
                         )
                     else:
-                        # Extend here for other types as you implement more classes
-                        continue
+                        continue 
 
                     setattr(self, attr_name, widget)
-                    channelwidgets.append(widget)
+                    self.channelwidgets.append(widget)
 
                     # Add each widget's GUI to the layout
-                    for widget in channelwidgets:
-                        left.addWidget(widget.gui)
-                    #self.setCentralWidget(central_widget)
+                    for widget in self.channelwidgets:
+                        right_layout.addWidget(widget.gui)
+                    #self.setCentralWidget(central_widget) 
             
              # Create the channels
-            systemwidgets = [] 
+            self.systemwidgets = [] 
             system = config_data.get('system', {})
             for channel, params in system.items():
                     if not isinstance(params, dict):
@@ -96,17 +111,14 @@ class YamlTestPage(QWidget):
                     attr_name = channel.lower()
 
                     if channel_type == 'Numeric':
-                        widget = ch.NumericSetting(
+                        widget = ch.NumericMonitor(
                             params['name'],
                             params['group'],
                             self.ser,
                             params['read_command'],
-                            params.get('write_command', ''),
                             params.get('description', ''),
-                            params.get('default_value', 0),
-                            params.get('min_value', 0),
-                            params.get('max_value', 0),
-                            units=params.get('units', '')
+                            params.get('units', ''),
+                            params.get('conversion_factor' , '')
                         )
 
                     elif channel_type == 'Switch':
@@ -122,25 +134,41 @@ class YamlTestPage(QWidget):
                         )
 
                     elif channel_type == 'Turbo':
-                        widget = ch.SwitchSetting(
+                        widget = ch.TurboSetting(
                             params['name'],
-                            params.get('description', ''),
                             params['group'],
                             self.ser,
                             params['read_command'],
                             params['write_command'],
+                            params.get('description', ''),
                         )
                     else:
                         # Extend here for other types as you implement more classes
                         continue
 
                     setattr(self, attr_name, widget)
-                    systemwidgets.append(widget)
+                    self.systemwidgets.append(widget)
 
                     # Add each widget's GUI to the layout
-                    for widget in systemwidgets:
-                        right.addWidget(widget.gui)          
+                    for widget in self.systemwidgets:
+                        left_layout.addWidget(widget.gui)          
           
+            # Create a timer for periodically checking the pressures and turbos
+            self.timer = QTimer(self)
+            self.timer.setInterval(1000)
+            self.timer.timeout.connect(self.monitor_loop)
+            self.timer.start()
+
+    def monitor_loop(self):
+    # Combine all widgets into a single list
+        all_widgets = self.systemwidgets + self.channelwidgets
+        for widget in all_widgets:
+            if isinstance(widget, ch.NumericSetting) or isinstance(widget, ch.NumericMonitor) or isinstance(widget, ch.TurboSetting):
+                widget.readActual()
+            elif isinstance(widget, ch.SwitchSetting):
+                pass
+                #widget.readSetting()
+        print('Finished one monitor loop')
 
     def closeEvent(self, event):
                 self.ser.close()

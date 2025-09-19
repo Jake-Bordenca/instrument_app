@@ -98,7 +98,6 @@ system:
         read_command: TP_2:MOSW?;TP_2:ROTR?;TP_2:POWR
         write_command: TP_2:MOSW
 
-
 channels:
     ESIHVOn:
         name: ESI HV On

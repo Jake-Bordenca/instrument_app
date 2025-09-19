@@ -2,7 +2,7 @@ import serial
 import time
 
 class SerialComms():
-    def __init__(self, instrument="Compact", port = 'COM1', baudrate=115200, timeout=10):
+    def __init__(self, instrument="Compact", port = 'COM3', baudrate=115200, timeout=10):
 
         self.instrument = instrument
         self.ser = serial.Serial(port = port, baudrate=baudrate, timeout=timeout)
@@ -23,7 +23,10 @@ class SerialComms():
         message = message + "@" + checksum[2:] + "\r"
         message_bytes = bytes(message, 'ascii')
         self.ser.write(message_bytes)
-        time.sleep(.015)
+        if 'HVC_' in message:
+            time.sleep(.2)
+        else:
+            time.sleep(.015)
         if self.ser.in_waiting > 0:
             data = self.ser.read(self.ser.in_waiting)
             data = data.replace(b'\x00',b'').replace(b'\x06', b'').strip(b'\r').split(b'\r')

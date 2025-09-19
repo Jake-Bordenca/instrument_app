@@ -10,7 +10,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import Qt, QSettings
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTabWidget, QAction, QActionGroup, QMessageBox
+    QApplication, QMainWindow, QTabWidget, QAction, QActionGroup, QMessageBox, QScrollArea
 )
 import pyqtgraph as pg
 
@@ -64,11 +64,11 @@ class MainWindow(QMainWindow):
 
     def _build_tabs(self):
         self.pressure = PressureInterlockPage(serial=self.serial, recorder=self.recorder)
-        self.bruker = BrukerControlPage()
+        #self.bruker = BrukerControlPage()
         self.test = YamlTestPage()
 
         self.tabs.addTab(self.pressure, "Pressures / Interlocks")
-        self.tabs.addTab(self.bruker, "Bruker Control")
+        #self.tabs.addTab(self.bruker, "Bruker Control")
         self.tabs.addTab(self.test, "Test")
 
     def _build_menu(self):
@@ -180,8 +180,10 @@ class MainWindow(QMainWindow):
             # give pages a chance to stop threads cleanly
             if hasattr(self.pressure, "close"):
                 self.pressure.close()
-            if hasattr(self.bruker, "close"):
-                self.bruker.close()
+            #if hasattr(self.bruker, "close"):
+            #    self.bruker.close()\
+            if hasattr(self.test, "close"):
+                self.test.close()
         finally:
             super().closeEvent(ev)
 

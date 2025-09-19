@@ -109,10 +109,6 @@ class CustomLineEditWithArrows(QWidget):
             return self.keyPressEvent(event)
         return super().eventFilter(obj, event)
 
-    def update_step_label(self):
-        step_value = self.step_values[self.current_step_index]
-        self.step_label.setText(f"±{step_value:.1f}")
-
     @property
     def value(self):
         return self.current_value
@@ -134,6 +130,10 @@ class CustomLineEditWithArrows(QWidget):
 
         else:
             print("Something's wrong!")    
+
+    def update_step_label(self):
+        step_value = self.step_values[self.current_step_index]
+        self.step_label.setText(f"±{step_value:.1f}")        
 
     @staticmethod
     def format_value(value):
@@ -180,10 +180,18 @@ class QNumericControl(QWidget):
         self.box.setValidator(QDoubleValidator(min_value, max_value, 1))
 
     def updateReadback(self, response):
+        if response is None:
+            return
         self.readback.setText(response[0])
 
+        print(response[0])
+
+        # Kludge, fix this later
+        if response[0].find('/') != -1:
+            return
+
         # Check if the readback is more than 5% different than the set value
-        if (self.value - float(response[0]))/self.value < 0.05:
+        if (self.value - float(response[0]))/max(self.value, 0.01) < 0.05:
             # Make the readback green
             self.readback.setStyleSheet('color: green;')
         else:
@@ -191,8 +199,17 @@ class QNumericControl(QWidget):
             self.readback.setStyleSheet('color: red;')
 
     def updateSetting(self, response):
-        self.box.text_box.setText(f"{float(response[0]):.1f}")
-
+       # self.box.text_box.setText(f"{float(response[0]):.1f}")
+        if isinstance(response, str):
+            self.box.text_box.setText(response)
+        elif isinstance(response, (float , int)):
+            self.box.text_box.setText(f"{float(response[0]):.1f}")
+        else:  
+            try:
+                newresponse = str(response[0].replace("/", ","))
+                self.box.text_box.setText(newresponse)
+            except TypeError:
+                self.box.text_box.setText("Error!")
 
 class QTurboControl(QWidget):
     turboSwitch = pyqtSignal(str)

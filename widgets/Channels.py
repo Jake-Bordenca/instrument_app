@@ -22,6 +22,7 @@ class Monitor(Channel):
         self.readback_command = readback_command
     
     def readActual(self):
+        print(self.name)
         response, full_response = self.COM.sendCompact(f'{self.readback_command}?')
         self.parse(response)
 
@@ -70,58 +71,32 @@ class NumericMonitor(Monitor):
 
 
 class BinaryMonitor(Monitor):
-    def __init__(self, name, group, 
-                 COM, readback_command, 
-                 decoder=(), 
-                 description=''):
-        super().__init__(name, group, COM, readback_command, description = description)
+    def __init__(self, name, group, COM, readback_command, description='', decoder=(), *args, **kwargs):
+        super().__init__(name, group, COM, readback_command, description = description, *args, **kwargs)
         self.decoder = decoder
         
         
 class NumericSetting(Setting):
-    def __init__(self, name, group, 
-                 COM, readback_command, set_command, 
-                 default_value=0.0, min_value=0.0, max_value=0.0, offset=None, polarity=False, 
-                 step_values=None, units='', description=''):
-        super().__init__(name, group, COM, readback_command, set_command, description = description)
+    def __init__(self, name, group, COM, readback_command, set_command, description='', 
+                 default_value=0.0, min_value=0.0, max_value=0.0, step_values=None, units='',
+                 *args, **kwargs):
+        super().__init__(name, group, COM, readback_command, set_command, description = description, *args, **kwargs)
         self.value = default_value
         self.min_value = min_value
         self.max_value = max_value
         self.step_values = step_values
 
-        if isinstance(offset, float):
-            self.offset = [offset]
-        elif isinstance(offset, list):
-            self.offset = offset
-        else:
-            print(f"Invalid argument for offset in {name}")
-
-  #      if self.offset is not None:
-   #         self.write_value = self.value - sum(self.offset)
-    #    else:
-      #      self.write_value = self.value
-
         self.gui = cw.QNumericControl(label_text = self.name, default_value = self.value, min_value = self.min_value, max_value = self.max_value)
         self.gui.box.valueConfirmed.connect(self.valueChange)
-        self.readSetting()
+        #self.readSetting()
 
     def valueChange(self, value):
         print('Value Changed')
-        if self.offset is not None:
-            self.write_value = self.value - sum(self.offset)
-        else:
-            self.write_value = self.value
-        self.write(f'{self.write_value:.1f}')
-
-# IFOC:ISEY - isCID energy
-# IFOC:IOEY - Quad energy offset
-# IFOC:COEY - Collision energy
+        self.write(f'{value:.1f}')
 
 
 class TurboSetting(Setting):
-    def __init__(self, name, group, 
-                 COM, readback_command, set_command, 
-                 description=''):
+    def __init__(self, name, group, COM, readback_command, set_command, description=''):
         super().__init__(name, group, COM, readback_command, set_command, description = description)
         self.switch_value = "START"
 
@@ -134,13 +109,9 @@ class TurboSetting(Setting):
         elif value == "STOP" and self.switch_value == "START":
             self.write('0')
 
-
 class SwitchSetting(Setting):
-    def __init__(self, name, group, 
-                 COM, readback_command, set_command, 
-                 options=None, default_value=None, 
-                 description=''):
-        super().__init__(name, group, COM, readback_command=readback_command, set_command=set_command, description = description)
+    def __init__(self, name, group, COM, set_command, description='', options=None, default_value=None):
+        super().__init__(name, group, COM, readback_command=None, set_command=set_command, description = description)
         self.options = options
         self.switch_value = default_value
 

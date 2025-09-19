@@ -15,7 +15,7 @@ class BrukerControlPage(QWidget):
             super().__init__()
 
             # Set up serial comms
-            self.ser = SerialComms.SerialComms(instrument = "compact", port = "COM1", baudrate = 115200)
+            self.ser = SerialComms.SerialComms(instrument = "compact", port = "COM3", baudrate = 115200)
 
             # Set up the window
             self.setWindowTitle("Vacuum Monitor")
@@ -27,8 +27,8 @@ class BrukerControlPage(QWidget):
             self.TOFpressure = ch.NumericMonitor("TOF Pressure", "Vacuum", self.ser, "VACU:SMPV", "TOF Pressure", "Torr", (0.76,0))
             self.TP1 = ch.TurboSetting("TP1", "Vacuum", self.ser, "TP_1:MOSW?;TP_1:ROTR?;TP_1:POWR", "TP_1:MOSW", "Source TP")
             self.TP2 = ch.TurboSetting("TP2", "Vacuum", self.ser, "TP_2:MOSW?;TP_2:ROTR?;TP_2:POWR", "TP_2:MOSW", "TOF TP")
-            self.V1 = ch.NumericSetting("V1", "Voltages", self.ser, "FOC1:L2V_", "FOC1:L2V_", 10, -40, 40, units="V", description="FOC1:L2V")
-            self.V2 = ch.NumericSetting("V2", "Voltages", self.ser, "FUN1:RFA_", "FUN1:RFA_",  20, 0, 100, units="V", description="FUN1:RFA")
+            self.V1 = ch.NumericSetting("V1", "Voltages", self.ser, "FOC1:L2V_", "FOC1:L2V_", "FOC1:L2V", 10, -40, 40, units="V")
+            self.V2 = ch.NumericSetting("V2", "Voltages", self.ser, "FUN1:RFA_", "FUN1:RFA_", "FUN1:RFA", 20, 0, 100, units="V")
             self.mode = ch.SwitchSetting("Mode", "Instrument", self.ser, "CTRL:MODE", options=["Shutdown","Standby Instrument","Standby","Operate","Acquisition","Mystery Mode 5","Mystery Mode 6"], default_value="Standby")
 
             # Add each channel's widget to the layout of the main window
@@ -39,7 +39,7 @@ class BrukerControlPage(QWidget):
             layout.addWidget(self.V1.gui)
             layout.addWidget(self.V2.gui)
             layout.addWidget(self.mode.gui)
-            self.setCentralWidget(central_widget)
+            #self.setCentralWidget(central_widget)
 
             # Create a timer for periodically checking the pressures and turbos
             self.timer = QTimer(self)
