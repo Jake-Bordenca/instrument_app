@@ -1,4 +1,4 @@
-import instrument_app.widgets.CustomWidgets as cw
+import CustomWidgets as cw
 
 ###############################################################################
 # The generic classes
