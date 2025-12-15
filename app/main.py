@@ -215,7 +215,7 @@ def main():
 
     app = QApplication(sys.argv)
     win = MainWindow()
-    win.resize(1200, 800)
+    win.resize(1200, 500)
     win.show()
     sys.exit(app.exec_())
 

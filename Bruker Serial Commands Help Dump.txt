@@ -1,0 +1,521 @@
+# BASE
+BASE:HELP+ BFFL?          -> list of flashed devices since last boot
+BASE:HELP+ BFFS?          -> flash status
+BASE:HELP+                    => 0: clear
+BASE:HELP+                    => 1: flashed ok (need reboot)
+BASE:HELP+                    => 2: flashing aborted
+BASE:HELP+                    => 3: error occured during flashing
+BASE:HELP+                    => 4: flashing in progress
+BASE:HELP+ BOOT=1         -> reboot the instrument
+BASE:HELP+ CONF?/$/=...   -> configuration-word of instrument
+BASE:HELP+ CDEF?/>1       -> configuration-word default
+BASE:HELP+ CHLP?          -> configuration-word help
+BASE:HELP+ IDNT?          -> ident of instrument:
+BASE:HELP+                        0 => none
+BASE:HELP+                     2579 => micrOTOF-Q
+BASE:HELP+                     2580 => maXis
+BASE:HELP+                     2581 => maXis Impact
+BASE:HELP+                     2582 => maXis Compact
+BASE:HELP+                     2612 => NIFTY
+BASE:HELP+                     1584 => RAINFOREST
+BASE:HELP+ LAST?          -> last received bff string
+BASE:HELP+ MB_D?          -> masterbuild date of the firmware
+BASE:HELP+ MB_L?          -> masterbuild label of the firmware
+BASE:HELP+ MEM_?          -> get informations of the memory
+BASE:HELP+ MBLL?          -> get all masterbuild labels
+BASE:HELP+ MODL?          -> display all possible modules
+BASE:HELP+ MSGQ?          -> display all message queues allocated through api's manager
+BASE:HELP+ NAME?/=        -> instrument name
+BASE:HELP+ PART?/$/=...   -> BDAL partnumber of the instrument
+BASE:HELP+ PASS=...       -> set password for firmware
+BASE:HELP+ SERN?/$/=...   -> BDAL serialnumber of the instrument
+BASE:HELP+ TASK?          -> get informations of all tasks
+BASE:HELP+ TEST=...       -> test command, reply all
+BASE:HELP+ VERS?          -> internal version of the firmware
+BASE:HELP+ HELP?          -> this help
+BASE:HELP+   
+BASE:HELP+  and you can flash a firmware, porttable or errortable.
+BASE:HELP?[36]
+# CTRL
+CTRL:HELP+ HCON$/=0:1     -> host is disconnected/connected
+CTRL:HELP+     
+CTRL:HELP+ DBUG=...       -> debug messages off(0) or
+CTRL:HELP+                      0x1 => DIGITIZER
+CTRL:HELP+                      0x2 => SYNC_CMD
+CTRL:HELP+                      0x4 => ACQUISITION
+CTRL:HELP+                      0x8 => QUENCHING
+CTRL:HELP+                     0x10 => TRANSFER_STAGE
+CTRL:HELP+                     0x20 => SAFETY_TIMER
+CTRL:HELP+                    0x100 => SUPPRESS_NEXT_AQUI
+CTRL:HELP+                    0x200 => SUPPRESS_NEXT_SYNC_CMD
+CTRL:HELP+ IFAC?/$/=...   -> intensity compensation factor A, B,C and D
+CTRL:HELP+ LSON$/=0:1     -> switch LED stripes (0: off, 1: on)
+CTRL:HELP+ MODE?/$/=...   -> operating mode 0 => SHUTDOWN
+CTRL:HELP+                                  1 => STANDBY_INSTRUMENT
+CTRL:HELP+                                  2 => STANDBY
+CTRL:HELP+                                  3 => OPERATE
+CTRL:HELP+                                  4 => ACQUISITION
+CTRL:HELP+ NAME?/$/=...   -> name of the MS (max.32 signs)
+CTRL:HELP+ NVDD=1         -> set NVData to default values
+CTRL:HELP+ PRST=1         -> reset periphery (SMC and HVC)
+CTRL:HELP+ QUEE?/$/=...   -> enable quenching on(1) or off(0)
+CTRL:HELP+ QUET?/$/=...   -> time for quench collision cell (max. 10000ms)
+CTRL:HELP+ REG1?/$/=      -> register 1 can be use by the host
+CTRL:HELP+ SCAN?/$/=...   -> scan mode 0 => MS,
+CTRL:HELP+                             1 => MSMS(CID)
+CTRL:HELP+                             2 => MS/MSMS(CID)
+CTRL:HELP+                             3 => MSMS(Auto)
+CTRL:HELP+                             4 => MSMS(Manual)
+CTRL:HELP+                             5 => BBCID
+CTRL:HELP+ SMSA?          -> get plain status message text: list all possible messages
+CTRL:HELP+ SMSG?          -> get plain status message text: get message of the highest bit set
+CTRL:HELP+ SMSL?          -> get plain status message text: list messages of all bits set
+CTRL:HELP+ SRDY>...       -> simulate digitizer active IRQ (for debugging only)
+CTRL:HELP+                    0 => LOW_LEVEL
+CTRL:HELP+                    1 => HIGH_LEVEL
+CTRL:HELP+                    2 => HIGH_WITHOUT_ENABLE
+CTRL:HELP+                    3 => MISSING_FALLING_EDGE
+CTRL:HELP+                    4 => MISSING_RISING_EDGE
+CTRL:HELP+                    5 => SPECIAL_LOW_LEVEL
+CTRL:HELP+ STAT?          -> state MS 0x00000000 => ready
+CTRL:HELP+                            use commands SMSA or SMSL to get detailed information
+CTRL:HELP+ SYNC?/$/=/>... -> synchronization PC/firmware
+CTRL:HELP+                    0 => off 
+CTRL:HELP+                    1 => on 
+CTRL:HELP+                    2 => on with synchronisation command
+CTRL:HELP+                    3 => off for digitizer calibration
+CTRL:HELP+ SYSA?/$/=...   -> enable (1) or disable (0) synchronization with sending AQUI
+CTRL:HELP+ SYTC?/$/=...   -> synchronization timeout counter (default: 15, max.: 1000, off: 0)
+CTRL:HELP+ TEM1?          -> get instrument temperature 1
+CTRL:HELP+ TEM2?          -> get instrument temperature 2
+CTRL:HELP+ HELP?          -> this help
+CTRL:HELP?[52]
+# VACU
+VACU:HELP+ CONF?          -> configuration - 0x00000001 => funnel gauge
+VACU:HELP+                                   0x00000002 => additional 4th gauge
+VACU:HELP+                                   0x00000004 => safety timer
+VACU:HELP+ DRDY$/=...     -> disable (1) vacuum ready
+VACU:HELP+ DPPL?/$/=...   -> set or get the relative docking pressure pulse levels in %
+VACU:HELP+ NVDD=1         -> set NVData to default values
+VACU:HELP+ SF_P?/$/=...   -> funnel gauge parameter:
+VACU:HELP+                     Presence Voltage [V] / Exponent / HardSetPoint [mbar] / Delay-SwitchOnTime [sec]
+VACU:HELP+ SFPV?          -> SourceFunnelPressure Value in mbar
+VACU:HELP+ SM_P?/$/=...   -> main gauge parameter:
+VACU:HELP+                    Presence Voltage [V] / Exponent / HardSetPoint [mbar] / Delay-SwitchOnTime [sec]
+VACU:HELP+ SMEN$/=...     -> switch SourceMainPressure gauge on/off (1/0)
+VACU:HELP+ SMPV?          -> SourceMainPressure Value in mbar
+VACU:HELP+ SR_P?/$/=...   -> rough gauge parameter:
+VACU:HELP+                     Presence Voltage [V] / Exponent / HardSetPoint [mbar] / Delay-SwitchOnTime [sec]
+VACU:HELP+ SREN$/=...     -> switch SourceRoughPressure gauge and pump on/off (1/0)
+VACU:HELP+ SRPV?          -> SourceRoughPressure Value in mbar
+VACU:HELP+ RAEN?/$/=...   -> switch application specific rough vacuum hard set point on/off (1/0)
+VACU:HELP+ RASV?/$/=...   -> set application specific rough vacuum hard set point value [mbar]
+VACU:HELP+ STAT?          -> get state 0x00000000 => ready
+VACU:HELP+                             0x00000001 => rough gauge not present
+VACU:HELP+                             0x00000002 => rough pump switched off
+VACU:HELP+                             0x00000004 => rough vacuum ready bit is low
+VACU:HELP+                             0x00000008 => rough vacuum not reached
+VACU:HELP+                             0x00000010 => high vacuum gauge not present
+VACU:HELP+                             0x00000020 => high vacuum gauge switched off
+VACU:HELP+                             0x00000040 => high vacuum ready bit is low
+VACU:HELP+                             0x00000080 => high vacuum not reached
+VACU:HELP+                             0x00000100 => funnel vacuum gauge not present
+VACU:HELP+                             0x00000200 => funnel vacuum gauge switched off
+VACU:HELP+                             0x00000400 => funnel vacuum ready bit is low
+VACU:HELP+                             0x00001000 => vacuum ready bit is low
+VACU:HELP+                             0x00010000 => overwrite vacuum ready
+VACU:HELP+                             0x00100000 => turbopump 2 is not connected
+VACU:HELP+                             0x00200000 => rotation of turbopump 2 is low
+VACU:HELP+                             0x01000000 => turbopump 1 is not connected
+VACU:HELP+                             0x02000000 => rotation of turbopump 1 is low
+VACU:HELP+                             0x10000000 => vacuum control is off
+VACU:HELP+                             0x20000000 => venting system
+VACU:HELP+                             0x40000000 => system is vented
+VACU:HELP+ TEHV?/$/=...   -> time error high vacuum (sec)
+VACU:HELP+ TEPV?/$/=...   -> time error poor vacuum (h)
+VACU:HELP+ TERV?/$/=...   -> time error rough vacuum (sec)
+VACU:HELP+ TSSH?/$/=...   -> turbopump speed switch on high voltage gauge(%)
+VACU:HELP+ VCEN?/$/=...   -> enable (1) or disable (0) vacuum control
+VACU:HELP+ VEND?          -> delay time for close venting valve (sec)
+VACU:HELP+ VENT?/$/=...   -> enable (1) or disable (0) venting
+VACU:HELP+ VEPT?/$/=...   -> safety timer parameter:
+VACU:HELP+                     cap change time window / dry time after venting / wait time for high vacuum
+VACU:HELP+ HELP?          -> this help
+VACU:HELP?[50]
+# TP_1
+TP_1:HELP+ CURR?          -> motor current [A]
+TP_1:HELP+ DBUG=...       -> debug messages on or off(0)
+TP_1:HELP+                              0x01  (all commands and responses)
+TP_1:HELP+                              0x02  (delayed responses (> 50 ms))
+TP_1:HELP+ INFO?          -> show some turpo pump values
+TP_1:HELP+ INIT=1         -> post initialization
+TP_1:HELP+ MOSW?/$/=...   -> motor switch on(1) or off(0)
+TP_1:HELP+ NVDD=1         -> set NVData to default values
+TP_1:HELP+ POWA?          -> motor power absolute [W]
+TP_1:HELP+ POWR?          -> motor power relative [%]
+TP_1:HELP+ ROTA?          -> rotation speed absolute [Hz]
+TP_1:HELP+ ROTM?          -> maximum rotation speed [Hz]
+TP_1:HELP+ ROTR?          -> rotation speed relative [%]
+TP_1:HELP+ SIMU?/$/=...   -> simulation on  (1 -> PFEIFFER)
+TP_1:HELP+                              on  (2 -> VARIAN)
+TP_1:HELP+                              on  (3 -> EDWARDS)
+TP_1:HELP+                              off(0)
+TP_1:HELP+ SOFT?          -> software version
+TP_1:HELP+ TYPE?          -> the type of the turbopump
+TP_1:HELP+ VOLT?          -> motor voltage [V]
+TP_1:HELP+ ------------------------------------------
+TP_1:HELP+ ADDR?/$/=...   -> device address (1 - 255)
+TP_1:HELP+ C_B1?/$/=      -> configure accessory connection B1 (not TC600)
+TP_1:HELP+ ERRO?          -> actual error code
+TP_1:HELP+ ERST=1         -> error reset
+TP_1:HELP+ INTF?/$/=...   -> use interface 1->remote or 2->RS485
+TP_1:HELP+ LIFE?          -> pump life [h]
+TP_1:HELP+ MODE?          -> control mode automatic (0) - stand alone (1)
+TP_1:HELP+ OIL_?          -> oil OK (0) or deficiency (1)
+TP_1:HELP+ OPMO?/$/=...   -> operation mode: max (0 - initial) or set rotation speed (1)
+TP_1:HELP+ PUSW?/$/=...   -> pump station switch on(1) or off(0)
+TP_1:HELP+ RAW_?/$/=      -> raw command   -> parameter length data
+TP_1:HELP+                               = ->   708        03   080
+TP_1:HELP+                               ? ->   708
+TP_1:HELP+                               $ ->   708
+TP_1:HELP+ REMO?/$/=...   -> control serial (0 - initial) or remote (1)
+TP_1:HELP+ ROTS?          -> setvalue rotation speed [Hz]
+TP_1:HELP+ SETP?/$/=...   -> setvalue power consumption (10 - 100%)
+TP_1:HELP+ SETV?/$/=...   -> setvalue rotation speed (20 - 100%) in operation mode 1
+TP_1:HELP+ TEMP?          -> temperature of the pump (not TC600)
+TP_1:HELP+ VEEN?/$/=...   -> venting enable on (1 - initial) or off(0)
+TP_1:HELP+ VEMO?/$/=...   -> venting mode ctrl (0 - initial), off (1) or on (2)
+TP_1:HELP+ VEFR?/$/=...   -> venting frequency (40 - 98% of final rotation speed)
+TP_1:HELP+ VETI?/$/=...   -> venting time (6 - 3600 sec)
+TP_1:HELP+ HELP?          -> this help
+TP_1:HELP?[45]
+# TP_2
+TP_2:HELP+ CURR?          -> motor current [A]
+TP_2:HELP+ DBUG=...       -> debug messages on or off(0)
+TP_2:HELP+                              0x01  (all commands and responses)
+TP_2:HELP+                              0x02  (delayed responses (> 50 ms))
+TP_2:HELP+ INFO?          -> show some turpo pump values
+TP_2:HELP+ INIT=1         -> post initialization
+TP_2:HELP+ MOSW?/$/=...   -> motor switch on(1) or off(0)
+TP_2:HELP+ NVDD=1         -> set NVData to default values
+TP_2:HELP+ POWA?          -> motor power absolute [W]
+TP_2:HELP+ POWR?          -> motor power relative [%]
+TP_2:HELP+ ROTA?          -> rotation speed absolute [Hz]
+TP_2:HELP+ ROTM?          -> maximum rotation speed [Hz]
+TP_2:HELP+ ROTR?          -> rotation speed relative [%]
+TP_2:HELP+ SIMU?/$/=...   -> simulation on  (1 -> PFEIFFER)
+TP_2:HELP+                              on  (2 -> VARIAN)
+TP_2:HELP+                              on  (3 -> EDWARDS)
+TP_2:HELP+                              off(0)
+TP_2:HELP+ SOFT?          -> software version
+TP_2:HELP+ TYPE?          -> the type of the turbopump
+TP_2:HELP+ VOLT?          -> motor voltage [V]
+TP_2:HELP+ ------------------------------------------
+TP_2:HELP+ ADDR?/$/=...   -> device address (1 - 255)
+TP_2:HELP+ C_B1?/$/=      -> configure accessory connection B1 (not TC600)
+TP_2:HELP+ ERRO?          -> actual error code
+TP_2:HELP+ ERST=1         -> error reset
+TP_2:HELP+ INTF?/$/=...   -> use interface 1->remote or 2->RS485
+TP_2:HELP+ LIFE?          -> pump life [h]
+TP_2:HELP+ MODE?          -> control mode automatic (0) - stand alone (1)
+TP_2:HELP+ OIL_?          -> oil OK (0) or deficiency (1)
+TP_2:HELP+ OPMO?/$/=...   -> operation mode: max (0 - initial) or set rotation speed (1)
+TP_2:HELP+ PUSW?/$/=...   -> pump station switch on(1) or off(0)
+TP_2:HELP+ RAW_?/$/=      -> raw command   -> parameter length data
+TP_2:HELP+                               = ->   708        03   080
+TP_2:HELP+                               ? ->   708
+TP_2:HELP+                               $ ->   708
+TP_2:HELP+ REMO?/$/=...   -> control serial (0 - initial) or remote (1)
+TP_2:HELP+ ROTS?          -> setvalue rotation speed [Hz]
+TP_2:HELP+ SETP?/$/=...   -> setvalue power consumption (10 - 100%)
+TP_2:HELP+ SETV?/$/=...   -> setvalue rotation speed (20 - 100%) in operation mode 1
+TP_2:HELP+ TEMP?          -> temperature of the pump (not TC600)
+TP_2:HELP+ VEEN?/$/=...   -> venting enable on (1 - initial) or off(0)
+TP_2:HELP+ VEMO?/$/=...   -> venting mode ctrl (0 - initial), off (1) or on (2)
+TP_2:HELP+ VEFR?/$/=...   -> venting frequency (40 - 98% of final rotation speed)
+TP_2:HELP+ VETI?/$/=...   -> venting time (6 - 3600 sec)
+TP_2:HELP+ HELP?          -> this help
+TP_2:HELP?[45]
+# ERR_
+ERR_:HELP+ CNT_?/$/=0       -> get or reset the number of occurred errors
+ERR_:HELP+ EP45?            -> returns first error message of priority 4|5 since (last) reset of error state
+ERR_:HELP+ ERRN=0x...       -> generate error associated to number passed
+ERR_:HELP+ ERST?/=1         -> get or reset the state of the error manager
+ERR_:HELP+ LOGA?            -> get all log entries
+ERR_:HELP+ LOGD?            -> get new log entries
+ERR_:HELP+ LOGE=1           -> erase all log entries
+ERR_:HELP+ MB_D?            -> reply masterbuild date of the errortable
+ERR_:HELP+ MB_L?            -> reply masterbuild label of the errortable
+ERR_:HELP+ MSGT?/$/=0:2     -> message type
+ERR_:HELP+                     0 => long
+ERR_:HELP+                     1 => short
+ERR_:HELP+                     2 => nearly free parameter format of each of up to five parameter
+ERR_:HELP+ PRIO?/=0x.../0:5 -> error priority associated to error number passed
+ERR_:HELP+                     0 => IGNORE
+ERR_:HELP+                     1 => NOTIFY
+ERR_:HELP+                     2 => LOGGING
+ERR_:HELP+                     3 => WARNING
+ERR_:HELP+                     4 => ERROR
+ERR_:HELP+                     5 => CRITICAL
+ERR_:HELP+ SECC?/$0x...     -> separates error code content (=> error code/module/BISBI address/error number/pure error code)
+ERR_:HELP+ HELP?            -> this help
+ERR_:HELP?[22]
+# ESI_
+ESI_:HELP+ APHV?/$/=...   -> APCI HV on(1) or off(0)
+ESI_:HELP+ AXEN?/$/=...   -> Active exhaust enable
+ESI_:HELP+ AXSV?/$/=...   -> Active exhaust set value
+ESI_:HELP+ CAAU?/$/=...   -> absolute voltage of ESI capillary
+ESI_:HELP+ CAPI?          -> current of ESI capillary
+ESI_:HELP+ CAPU?/$/=...   -> voltage of ESI capillary
+ESI_:HELP+ CASP?/$/=...   -> voltage of ESI capillary and sprayshield endplate offset
+ESI_:HELP+                     capillary [V] / spray shield offset [V]
+ESI_:HELP+ CRNI?/$/=...   -> current of APCI corona
+ESI_:HELP+ CRNU?          -> voltage of APCI corona
+ESI_:HELP+ DGFE?/$/=...   -> drygas flow on(1) or off(0)
+ESI_:HELP+ DGFL?/$/=...   -> flow of drygas
+ESI_:HELP+ DGFM?/$/=...   -> control messages (set value) of drygas flow on(1) or off(0)
+ESI_:HELP+ DGFO?/$/=...   -> observer check drygas nitrogen flow on(1) or off(0)
+ESI_:HELP+ DGFS?/$        -> pulse length of dry gas flow pwm frequency [%]
+ESI_:HELP+ DGON?/$/=...   -> drygas flow and temperature on(1) or off(0)
+ESI_:HELP+ DGTE?/$/=...   -> drygas temperature on(1) or off(0)
+ESI_:HELP+ DGTM?/$/=...   -> control messages (set value) of drygas temperature on(1) or off(0)
+ESI_:HELP+ DGTP?/$/=...   -> drygas temperature
+ESI_:HELP+ DGTS?/$        -> pulse length of dry gas temperature pwm frequency [%]
+ESI_:HELP+ DFCP?/$/=...   -> P/I/D parameter of the drygas flow controller
+ESI_:HELP+ DFCS?/$/=...   -> controller preset-factor drygas flow
+ESI_:HELP+ DFCT?/$/=...   -> controller cycle time [sec]   drygas flow
+ESI_:HELP+ DTCP?/$/=...   -> P/I/D parameter of the drygas temperature controller
+ESI_:HELP+ DTCS?/$/=...   -> controller preset-factor drygas temperature
+ESI_:HELP+ DTCT?/$/=...   -> controller cycle time [sec]   drygas temperature
+ESI_:HELP+ ESHV?/$/=...   -> ESI HV on(1) or off(0)
+ESI_:HELP+ HVON?/$/=...   -> ESI/APCI HV on(1) or off(0)
+ESI_:HELP+ HDUN?          -> Has Desolvation Unit an Nvram
+ESI_:HELP+ IPHC?/$        -> is HESI controller present
+ESI_:HELP+ P_HV$/=...     -> to switch polarity (DQ01) positive (0) or negative (1)
+ESI_:HELP+ MIOM?/$/=...   -> ionisation mode of the multi mode source
+ESI_:HELP+                    0 => esi
+ESI_:HELP+                    1 => apci
+ESI_:HELP+                    2 => mixed
+ESI_:HELP+ NBON?/$/=...   -> nebulizer pressure and temperature on(1) or off(0)
+ESI_:HELP+ NBPE?/$/=...   -> nebulizer pressure on(1) or off(0)
+ESI_:HELP+ NBPM?/$/=...   -> debug messages of pressure nebulizer on(1) or off(0)
+ESI_:HELP+ NBPO?/$/=...   -> observer check nebulizer nitrogen pressure on(1) or off(0)
+ESI_:HELP+ NBPR?/$/=...   -> nebulizer pressure
+ESI_:HELP+ NBPS?          -> pulse length of nebulizer pressure pwm frequency [%]
+ESI_:HELP+ NBTE?/$/=...   -> nebulizer temperature on(1) or off(0)
+ESI_:HELP+ NBTM?/$/=...   -> debug messages of temperature nebulizer on(1) or off(0)
+ESI_:HELP+ NBTP?/$/=...   -> nebulizer temperature
+ESI_:HELP+ NBTS?/$        -> pulse length of nebulizer temperature pwm frequency [%]
+ESI_:HELP+ NPCA?/$/=...   -> duty cycle control is active after x cycles (0 -> off)
+ESI_:HELP+ NPCD?/$/=...   -> duty cycle control (20 -80%) - pwm standard is 40% (range is +-15%)
+ESI_:HELP+ NPCP?/$/=...   -> P/I/D parameter of the nebulizer pressure controller
+ESI_:HELP+ NPCS?/$/=...   -> controller preset-factor nebulizer pressure
+ESI_:HELP+ NPCT?/$/=...   -> controller cycle time [sec] nebulizer pressure
+ESI_:HELP+ NTCP?/$/=...   -> P/I/D parameter of the nebulizer temperature controller
+ESI_:HELP+ NTCS?/$/=...   -> controller preset-factor nebulizer temperature
+ESI_:HELP+ NTCT?/$/=...   -> controller cycle time [sec] nebulizer temperature
+ESI_:HELP+ HTCP?/$/=...   -> P/I/D parameter of the VIP-HESI temperature controller
+ESI_:HELP+ HTCS?/$/=...   -> controller preset-factor VIP-HESI temperature
+ESI_:HELP+ HTCT?/$/=...   -> controller cycle time [sec] VIP-HESI temperature
+ESI_:HELP+ NVDD=1         -> nvram data to default values
+ESI_:HELP+ SGFL?/$/=...   -> Sheath gas flow
+ESI_:HELP+ SGEN?/$/=...   -> Sheath gas enable
+ESI_:HELP+ SPAU?/$/=...   -> absolute voltage of spray shield
+ESI_:HELP+ SPSI?          -> current of spray shield
+ESI_:HELP+ SPSU$/=...     -> voltage of spray shield
+ESI_:HELP+ HELP?          -> this help
+ESI_:HELP?[63]
+# IFOC
+IFOC:HELP+ ISRC submodule name for commands of ion source:
+IFOC:HELP+ CXV_?/$/=...   -> capillary exit voltage
+IFOC:HELP+   
+IFOC:HELP+ FUN1 submodule name for commands of funnel 1:
+IFOC:HELP+ FUN_?/$/=...   -> all parameters at once
+IFOC:HELP+ RFA_?/$/=...   -> rf voltage funnel 1
+IFOC:HELP+ ENV_?/$/=...   -> entrance voltage
+IFOC:HELP+ EXV_?/$/=...   -> exit/base voltage
+IFOC:HELP+ L1V_?/$/=...   -> lens 1 voltage
+IFOC:HELP+   
+IFOC:HELP+ FUN2 submodule name for commands of funnel 2:
+IFOC:HELP+ FUN_?/$/=...   -> all parameters at once
+IFOC:HELP+ RFA_?/$/=...   -> rf voltage funnel 2
+IFOC:HELP+ ENV_?/$/=...   -> entrance voltage
+IFOC:HELP+ EXV_?/$/=...   -> exit/base voltage
+IFOC:HELP+ L1V_?/$/=...   -> lens 1 voltage
+IFOC:HELP+   
+IFOC:HELP+ MP_1 submodule name for commands of multipole 1:
+IFOC:HELP+ MP__?/$/=...   -> all parameters at once
+IFOC:HELP+ RFA_?/$/=...   -> rf voltage
+IFOC:HELP+ L1V_?/$/=...   -> lens 1 voltage
+IFOC:HELP+ B1V_?/$/=...   -> bias1 voltage
+IFOC:HELP+ B2V_?/$/=...   -> bias2 voltage
+IFOC:HELP+ SV__?/$/=...   -> shield voltage
+IFOC:HELP+   
+IFOC:HELP+ FOC1 submodule name for commands of focus lens set 1:
+IFOC:HELP+ FOC_?/$/=...   -> all parameters at once
+IFOC:HELP+ L1V_?/$/=...   -> both lens 1 voltages
+IFOC:HELP+ L1VL?/$/=...   -> lens 1 voltage low
+IFOC:HELP+ L1VH?/$/=...   -> lens 1 voltage high
+IFOC:HELP+ L2V_?/$/=...   -> lens 2 voltage
+IFOC:HELP+ L3V_?/$/=...   -> lens 3 voltage
+IFOC:HELP+   
+IFOC:HELP+ QP_1 submodule name for commands of quadrupole 1:
+IFOC:HELP+ QP_A?/$/=...   -> all parameters for rf-mode at once
+IFOC:HELP+ QP_M?/$/=...   -> all parameters for mass-filter-mode at once
+IFOC:HELP+ RFA_?/$/=...   -> rf voltage
+IFOC:HELP+ MASS?/$/=...   -> mass
+IFOC:HELP+ RESO?/$/=...   -> mass filter width
+IFOC:HELP+ DDRP?/$/=...   -> mass and filter width
+IFOC:HELP+ ENV_?/$/=...   -> entrance voltage
+IFOC:HELP+   
+IFOC:HELP+ FOC2 submodule name for commands of focus lens set 2:
+IFOC:HELP+ FOC_?/$/=...   -> all parameters at once
+IFOC:HELP+ L1V_?/$/=...   -> lens 1 voltage
+IFOC:HELP+ L2V_?/$/=...   -> lens 2 voltage
+IFOC:HELP+ L3V_?/$/=...   -> lens 3 voltage
+IFOC:HELP+   
+IFOC:HELP+ CC_1 submodule name for commands of collision cell 1:
+IFOC:HELP+ MP__?/$/=...   -> all parameters at once
+IFOC:HELP+ RFA_?/$/=...   -> rf voltage
+IFOC:HELP+ B1V_?/$/=...   -> bias 1 voltage
+IFOC:HELP+ MRFA?/$/=...   -> get the maximum set value for the rf-amplitude
+IFOC:HELP+   
+IFOC:HELP+ FOC3 submodule name for commands of focus lens set 3:
+IFOC:HELP+ FOC_?/$/=...   -> all parameters at once
+IFOC:HELP+ L1V_?/$/=...   -> both lens 1 voltages
+IFOC:HELP+ L1VL?/$/=...   -> lens 1 voltage low
+IFOC:HELP+ L1VH?/$/=...   -> lens 1 voltage high
+IFOC:HELP+ L1ST?/$/=...   -> lens 1 voltage pulser state
+IFOC:HELP+ L2V_?/$/=...   -> lens 2 voltage
+IFOC:HELP+ L3V_?/$/=...   -> lens 3 voltage
+IFOC:HELP+   
+IFOC:HELP+ IFOC commands for the ion focussing module itself:
+IFOC:HELP+ CALA=...       -> add an entry to the calibration table
+IFOC:HELP+                   CALA=MASS/M1RF/IOEY/C1RF/P2TL/P2TH
+IFOC:HELP+ CALC=1         -> clear the calibration table (all entries)
+IFOC:HELP+ CALE?/$/=...   -> enable/disable calibration entries
+IFOC:HELP+                   0x00000001 => M1RF
+IFOC:HELP+                   0x00000010 => IOEY
+IFOC:HELP+                   0x00000100 => C1RF
+IFOC:HELP+                   0x00001000 => P2TL + P2TH
+IFOC:HELP+ CALG?          -> get the calibration table
+IFOC:HELP+ CALL=1         -> load the calibration table
+IFOC:HELP+ CALR?/$/=...   -> remove an entry of the calibration table
+IFOC:HELP+ CALS=1         -> save the calibration table
+IFOC:HELP+ COEY$/=...     -> collision energy offset[eV/z]
+IFOC:HELP+ IOEY$/=...     -> ion energy offset[eV/z]
+IFOC:HELP+ ISEY$/=...     -> in source energy offset[eV/z]
+IFOC:HELP+ ACQT?/$/=...   -> acquisition time [ms]-> active time of acqiris (min.:50) 
+IFOC:HELP+ TSWA=1         -> start the time stepping (one time for debugging)
+IFOC:HELP+ TSWE?/$/=...   -> enable/disable time stepping
+IFOC:HELP+ TSWT?/$/=...   -> switching times [%]
+IFOC:HELP+ C1_E?/$/=...   -> enable/disable collision cell RF stepping
+IFOC:HELP+ C1_F?/$/=...   -> switch factors for voltage of C1RF
+IFOC:HELP+ CE_E?/$/=...   -> enable/disable collision energy stepping
+IFOC:HELP+ CE_F?/$/=...   -> switch factors for values of COEY
+IFOC:HELP+ TT_E?/$/=...   -> enable/disable transfer time stepping
+IFOC:HELP+ TT_F?/$/=...   -> switch factors for values of transfer time
+IFOC:HELP+ CREG?/$/=...   -> control register
+IFOC:HELP+ DBUG=...       -> debug messages off(0) or
+IFOC:HELP+ LVON?/$/=...   -> lens voltage supply on/off
+IFOC:HELP+ IONP?/=...     -> ion polarity: 0=pos 1=neg
+IFOC:HELP+ HELP?          -> this help
+IFOC:HELP?[94]
+# CGAS
+CGAS:HELP+ BVCL?/$/=0:100   -> Bypass valve close limit [%]
+CGAS:HELP+ BYPV?/$/=0:1     -> close/open bypass valve
+CGAS:HELP+ CTLD?/$/=...     -> d part of controller
+CGAS:HELP+ CTLE?/$/=0:1     -> stop/start controller
+CGAS:HELP+ CTLI?/$/=...     -> i part of controller
+CGAS:HELP+ CTLP?/$/=...     -> p part of controller
+CGAS:HELP+ CTLT?/$/=...     -> sample rate of controller
+CGAS:HELP+ DBUG?/$/=0:1     -> debug messages
+CGAS:HELP+ FLUE?/$/=1       -> stop/start automatic flush
+CGAS:HELP+ FLUT?/$/=1:3600  -> run time for automatic flush [sec]
+CGAS:HELP+ ISRV?/$          -> Is reagent valve on gas module
+CGAS:HELP+ NVDD?/=1         -> set nvram data to default values
+CGAS:HELP+ OFSP?/$/=0:100   -> set controller offset
+CGAS:HELP+ PZOV?/$/=0:1     -> close/open piezo valve
+CGAS:HELP+ REGV?/$/=0:1     -> close/open reagent valve
+CGAS:HELP+ SETP$/=0:100     -> manual setting of setport [%]
+CGAS:HELP+ SMTD?/$/=        -> deviation smooth time
+CGAS:HELP+ SMTS?/$/=        -> setvalue smooth time
+CGAS:HELP+ VALA?/$/=...     -> absolute value for controller
+CGAS:HELP+ VALR?/$/=...     -> relative value for controller [%]
+CGAS:HELP+ HELP?            -> this help
+CGAS:HELP?[21]
+# HVC_
+HVC_:HELP+ _CFG$/?/=... -> Config HV-Controller (hidden)
+HVC_:HELP+ _CRC=0:1     -> Switch on/off CRC (hidden)
+HVC_:HELP+ _ERS=1       -> Clear error(hidden)
+HVC_:HELP+ _IIP$/?/=0:1 -> Init ion polarity (hidden)
+HVC_:HELP+ _MBL?        -> Masterbuild label (hidden)
+HVC_:HELP+ _POL$/?/=0:1 -> Ion polarity (hidden)
+HVC_:HELP+ _SHD=1       -> Shutdown mode (hidden)
+HVC_:HELP+ _STA$/?      -> HVC status (hidden)
+HVC_:HELP+ BOOT=1       -> Boot the OTHVC
+HVC_:HELP+ CALI$/?/=1   -> Calibrate DAC/ADC)
+HVC_:HELP+ CONF$/?/=... -> Configuration HV-Controller)
+HVC_:HELP+ CRE_$/?/=... -> Set/get corretor extract
+HVC_:HELP+ CREM$/?/=0:1 -> Control corretor extract monitor
+HVC_:HELP+ CRF_$/?/=... -> Set/get corrector fill
+HVC_:HELP+ CRFM$/?/=0:1 -> Control corrector fill monitor
+HVC_:HELP+ DACM$/?/=0:1 -> Control DAC set monitor
+HVC_:HELP+ DEC_$/?/=... -> Set/get decelerator
+HVC_:HELP+ DECM$/?/=0:1 -> Control decelerator monitor
+HVC_:HELP+ DET_$/?/=... -> Set/get detector
+HVC_:HELP+ DETM$/?/=0:1 -> Control detector monitor
+HVC_:HELP+ ERST=1       -> Clear error status
+HVC_:HELP+ FLT_$/?/=... -> Set/get flight tube
+HVC_:HELP+ FLTM$/?/=0:1 -> Control flight tube monitor
+HVC_:HELP+ FUSE?        -> Check fuses
+HVC_:HELP+ FUSM$/?/=0:1 -> Control fuse monitor
+HVC_:HELP+ HVCM$/?/=0:1 -> Control OTHVC supply monitor
+HVC_:HELP+ HVCP?        -> Check power of OTHVC
+HVC_:HELP+ HVON$/?/=0:1 -> Switch on high voltage
+HVC_:HELP+ HVSM$/?/=0:1 -> Control hv switch monitor
+HVC_:HELP+ HVSR?        -> Check hv switch ready
+HVC_:HELP+ LNS_$/?/=... -> Set/get lense
+HVC_:HELP+ LNSM$/?/=0:1 -> Control lense monitor
+HVC_:HELP+ MAXV$/?      -> Get all max HV
+HVC_:HELP+ MB_D?        -> Masterbuild date
+HVC_:HELP+ MB_L?        -> Masterbuild label
+HVC_:HELP+ MCRE$/?/=... -> Max value corretor extract
+HVC_:HELP+ MCRF$/?/=... -> Max value corrector fill
+HVC_:HELP+ MDEC$/?/=... -> Max value decelerator
+HVC_:HELP+ MDET$/?/=... -> Max value detector
+HVC_:HELP+ MFLT$/?/=... -> Max value flight tube
+HVC_:HELP+ MLNS$/?/=... -> Max value lense
+HVC_:HELP+ MMUL$/?/=... -> Max value multiplier
+HVC_:HELP+ MONV$/?      -> Get all hv monitor (FLTT/REFL//TDET/SDET/PUSH//EXTR/FILL)
+HVC_:HELP+ MONC?        -> Get all currrent monitor
+HVC_:HELP+ MPLL$/?/=... -> Max value pull
+HVC_:HELP+ MPSH$/?/=... -> Max value push
+HVC_:HELP+ MREF$/?/=... -> Max value reflector
+HVC_:HELP+ MRES$/?/=... -> Max value reserve
+HVC_:HELP+ MUL_$/?/=... -> Set/get multiplier
+HVC_:HELP+ MULM$/?/=0:1 -> Control multiplier monitor
+HVC_:HELP+ PLL_$/?/=... -> Set/get pull
+HVC_:HELP+ PLLM$/?/=0:1 -> Control pull monitor
+HVC_:HELP+ POL_$/?/=... -> Ion polarity
+HVC_:HELP+ POLM$/?/=0:1 -> control polarity monitor
+HVC_:HELP+ PSH_$/?/=... -> Set/get push
+HVC_:HELP+ PSHM$/?/=0:1 -> Control push monitor
+HVC_:HELP+ REF_$/?/=... -> Set/get reflector
+HVC_:HELP+ REFM$/?/=0:1 -> Control reflector monitor
+HVC_:HELP+ RES_$/?/=... -> Set/get reserve
+HVC_:HELP+ RESM$/?/=0:1 -> Control reserve monitor
+HVC_:HELP+ RIFA$/?=0:3  -> Rise/fall parameter
+HVC_:HELP+ SHDN=1       -> Shutdown mode
+HVC_:HELP+ STAT$/?      -> HVC status
+HVC_:HELP+ SW_P?        -> HV switch polarity
+HVC_:HELP+ SW_T?        -> HV switch temperature
+HVC_:HELP+ THVS=1       -> test strobe hv-switch
+HVC_:HELP+ UREF?        -> Check U reference
+HVC_:HELP+ UREM$/?/=0:1 -> Control U reference monitor
+HVC_:HELP+ VACM$/?/=0:1 -> Control vacuum monitor
+HVC_:HELP+ VACR?        -> Get vacuum status
+HVC_:HELP+ VERS?        -> Version of OTHVC
+HVC_:HELP+ VFTR$/?/=... -> Step size flight tube ramp
+HVC_:HELP+ HELP?        -> This help
+HVC_:HELP?[73]
