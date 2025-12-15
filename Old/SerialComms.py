@@ -22,19 +22,14 @@ class SerialComms():
     def sendCompact(self, message):
         message_bytes = bytes(message, 'ascii')
         message_list = message.strip('\r').split(';')
-        checksum = str(hex(self.crc16(message_bytes, 0, len(message_bytes)))).upper()[2:]
-        while len(checksum) < 4:
-                checksum = "0" + checksum
-        message = message + "@" + checksum + "\r"
+        checksum = str(hex(self.crc16(message_bytes, 0, len(message_bytes)))).upper()
+        message = message + "@" + checksum[2:] + "\r"
         message_bytes = bytes(message, 'ascii')
         self.ser.write(message_bytes)
-        #print('>>', message)
         for m in message_list:
             if '=' in m:
                 m = m.split('=')[0] + '='
             #print("add", m)
-            if m in self.queue.keys():
-                print(f'Missed a response for {m}')
             self.queue[m] = time.perf_counter()
 
 
@@ -45,7 +40,6 @@ class SerialComms():
             data = data.replace(b'\x00',b'').replace(b'\x06', b'').strip(b'\r').decode('ascii')
             if "@" not in data:
                 continue
-            #print('<<', data)
             response, checksum = data.split("@")
             check_checksum = str(hex(self.crc16(bytes(response, 'ascii'), 0, len(response))))[2:].upper()
             while len(check_checksum) < 4:
@@ -63,22 +57,14 @@ class SerialComms():
                     messages.append(message)
                     values.append(value)
                     responses.append(response)
-                elif "$" in response:
-                    message, value = response.split("$")
-                    message = message + "$"
-                    messages.append(message)
-                    values.append(value)
-                    responses.append(response)
                 else:
-                    print("Unexpected response format received:", response, 'from message:', message)
+                    print("Unexpected response format received:", response)
                     break
             else:
                 print("Checksum wrong")
                 break
-            if message in self.queue.keys():
-                del self.queue[message]
-            else:
-                print(f"No corresponding message for {message} found in queue")
+
+            del self.queue[message]
 
         return messages, values, responses
         

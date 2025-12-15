@@ -109,10 +109,6 @@ class CustomLineEditWithArrows(QWidget):
             return self.keyPressEvent(event)
         return super().eventFilter(obj, event)
 
-    def update_step_label(self):
-        step_value = self.step_values[self.current_step_index]
-        self.step_label.setText(f"±{step_value:.1f}")
-
     @property
     def value(self):
         return self.current_value
@@ -120,12 +116,24 @@ class CustomLineEditWithArrows(QWidget):
     @staticmethod
     def generate_step_values(max_value):
         step_values = []
-        order = floor(log10(max_value))
-        step = 10**(order - 3)
-        while step <= max_value:
-            step_values.append(step)
-            step *= 10
-        return step_values
+
+        if max_value > 0: 
+            order = floor(log10(max_value))
+            step = 10**(order - 3)
+            while step <= max_value:
+                step_values.append(step)
+                step *= 10
+            return step_values
+            
+        elif max_value==0:
+            print("Max Value = 0!")
+
+        else:
+            print("Something's wrong!")    
+
+    def update_step_label(self):
+        step_value = self.step_values[self.current_step_index]
+        self.step_label.setText(f"±{step_value:.1f}")        
 
     @staticmethod
     def format_value(value):
@@ -138,19 +146,18 @@ class CustomLineEditWithArrows(QWidget):
 class QNumericControl(QWidget):
     def __init__(self, label_text="default", 
                  default_value=0.0, min_value=0.0, max_value=1000.0, step_values=None, 
-                 units='', parent=None, channel=None, *args, **kwargs):
+                 units='', parent=None, *args, **kwargs):
         super().__init__(parent)
 
         # We need a variable to hold the set voltage as a float
-        self.set_value = default_value
-        self.actual_value = None
+        self.value = default_value
         self.units = units
 
         # Create a QLabel for the title
         self.title_label = QLabel(label_text)
 
         # Create a CustomLineEditWithArrows (text box)
-        self.box = CustomLineEditWithArrows(self.set_value, min_value, max_value, step_values, units = self.units)
+        self.box = CustomLineEditWithArrows(self.value, min_value, max_value, step_values, units = self.units)
 
         # Create a QLabel to display the eradback
         self.readback = QLabel()
@@ -172,35 +179,42 @@ class QNumericControl(QWidget):
         self.box.previous_value = default_value
         self.box.setValidator(QDoubleValidator(min_value, max_value, 1))
 
-    def updateReadback(self, messagae, value):
-        converted_value = float(value)
-        self.readback.setText(value)
+    def updateReadback(self, response):
+        if response is None:
+            return
+        self.readback.setText(response[0])
+
+        print(response[0])
+
+        # Kludge, fix this later
+        if response[0].find('/') != -1:
+            return
 
         # Check if the readback is more than 5% different than the set value
-        if (self.set_value - converted_value)/self.set_value < 0.05:
+        if (self.value - float(response[0]))/max(self.value, 0.01) < 0.05:
             # Make the readback green
             self.readback.setStyleSheet('color: green;')
         else:
             # Make the readback red
             self.readback.setStyleSheet('color: red;')
 
-        self.actual_value = converted_value
-
-    def updateSetting(self, message, value):
-        converted_value = float(value)
-        self.box.text_box.setText(f"{converted_value:.1f}")
-        self.set_value = converted_value
-
-    def getSetValue(self):
-        return self.set_value
-
-    def getActualValue(self):
-        return self.actual_value
+    def updateSetting(self, response):
+       # self.box.text_box.setText(f"{float(response[0]):.1f}")
+        if isinstance(response, str):
+            self.box.text_box.setText(response)
+        elif isinstance(response, (float , int)):
+            self.box.text_box.setText(f"{float(response[0]):.1f}")
+        else:  
+            try:
+                newresponse = str(response[0].replace("/", ","))
+                self.box.text_box.setText(newresponse)
+            except TypeError:
+                self.box.text_box.setText("Error!")
 
 class QTurboControl(QWidget):
     turboSwitch = pyqtSignal(str)
 
-    def __init__(self, label_text="default", parent=None, channel=None):
+    def __init__(self, label_text="default", parent=None):
         super().__init__(parent)
 
         # Create the subwidgets
@@ -233,40 +247,41 @@ class QTurboControl(QWidget):
         # Apply the layout
         self.setLayout(layout)
 
-    def updateReadback(self, message, value):
-        # if len(response) == 1:
-        #     onoff = response
-        # elif len(response) == 3:
-        #     # Unpack the response
-        #     onoff, speed, power = response
-        #     # Update the speed and power displays
-        #     self.speed.setValue(int(speed))
-        #     self.power.setText(f'{power}%')
-        # else:
-        #     print("Wrong number of responses to turbo read")
-
-        if 'ROTR' in message:
-            self.speed.setValue(int(value))
-        elif 'POWR' in message:
-            self.power.setText(f'{value}%')
-        elif 'MOSW' in message:
-            # Deal with the on/off stuff
-            if value == "0":
-                self.switch.text = "STOP"
-                self.switch.setStyleSheet("background-color: lightgreen;")
-            elif value == "1":
-                self.switch.text = "START"
-                self.switch.setStyleSheet("background-color: red;")
-            else:
-                print("Invalid response to turbo switch")
+    def updateReadback(self, response):
+        if len(response) == 1:
+            onoff = response
+        elif len(response) == 3:
+            # Unpack the response
+            onoff, speed, power = response
+            # Update the speed and power displays
+            self.speed.setValue(int(speed))
+            self.power.setText(f'{power}%')
         else:
-            print(f"Got an unexpected message {message} for {self.title_label.text}")
+            print("Wrong number of responses to turbo read")
+
+        # Deal with the on/off stuff
+        if onoff == "0":
+            self.switch.text = "STOP"
+            self.switch.setStyleSheet("background-color: lightgreen;")
+        elif onoff == "1":
+            self.switch.text = "START"
+            self.switch.setStyleSheet("background-color: red;")
+        else:
+            print("Invalid response to turbo switch")
+
+    def updateSetting(self, response):
+        # Deal with the on/off stuff
+        if response == "0":
+            self.switch.text = "STOP"
+            self.switch.setStyleSheet("background-color: lightgreen;")
+        elif response == "1":
+            self.switch.text = "START"
+            self.switch.setStyleSheet("background-color: red;")
+        else:
+            print("Invalid response to turbo switch")
 
     def clickEvent(self, clicked):
         self.turboSwitch.emit(clicked)
-
-    def getStatus(self):
-        return {'Switch': 'On', 'Speed': self.speed.value, 'Power': int(self.power.text.rstrip('%'))}
 
 
 class QSwitchControl(QWidget):
@@ -280,28 +295,23 @@ class QSwitchControl(QWidget):
         self.value = QComboBox()
         self.value.addItems(self.options)
         self.value.activated.connect(self.comboEvent)
-        self.updateSetting(None, str(self.options.index(default_value)))
+        self.updateSetting([self.options.index(default_value)])
 
         layout = QVBoxLayout()
         layout.addWidget(self.title_label)
         layout.addWidget(self.value)
         self.setLayout(layout)
 
-    def updateSetting(self, message, value):
-        response = int(value)
-        if response == self.value.currentIndex():
-            return
-        if response in (1, 2, 3, 4, 5, 6):
-            self.value.setCurrentIndex(response)
+    def updateSetting(self, response):
+        print(response, self.options)
+        if response[0] in (1, 2, 3, 4, 5, 6):
+            self.value.setCurrentIndex(int(response[0]))
         else:
             print(f"Default value not found in list of options for {self.title_label} combo box.")
-        #self.value.setCurrentIndex(response)
+        self.value.setCurrentIndex(int(response[0]))
 
     def comboEvent(self, selection):
         self.switchChanged.emit(selection)
-
-    def getSetValue(self):
-        return self.value.currentText
         
 
 class QNumericMonitor(QWidget):
@@ -320,8 +330,5 @@ class QNumericMonitor(QWidget):
         # Apply the layout
         self.setLayout(layout)
 
-    def updateReadback(self, message, value):
-        self.value.setText(f"{float(value)*.76:.3e} {self.units}")
-
-    def getActualValue(self):
-        return float(self.value.text)
+    def updateReadback(self, response):
+        self.value.setText(f"{float(response[0])*.76:.3e} {self.units}")
