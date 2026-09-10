@@ -70,7 +70,7 @@ system:
         group: Vacuum
         type: Numeric
         read_command: VACU:SRPV
-        conversion_factor: [0.76, 0]
+        conversion_factor: 0.76
         units: Torr
 
     TOFPressure:
@@ -79,7 +79,7 @@ system:
         group: Vacuum
         type: Numeric
         read_command: VACU:SMPV
-        conversion_factor: [0.76, 0]
+        conversion_factor: 0.76
         units: Torr
 
     TP1:
@@ -117,12 +117,21 @@ system:
         conversion_factor: 1
         units: nA
 
-    ESICapilaaryCurrent:
+    ESICapillaryCurrent:
         name: ESI Capillary Current
         description: Current on the ESI capillary in nA
         group: Vacuum
         type: Numeric
         read_command: ESI_:CAPI
+        conversion_factor: 1
+        units: nA
+
+    ESISprayShieldCurrent:
+        name: ESI Spray Shield Current
+        description: Current on the ESI Spray Shield in nA
+        group: Vacuum
+        type: Numeric
+        read_command: ESI_:SPSI
         conversion_factor: 1
         units: nA
 
@@ -506,7 +515,7 @@ channels:
     QuadRampEntrance:
         name: Quad Ramp Entrance Voltage
         description: Voltage at the beginning of the quadrupole energy ramps
-        group: Transfer
+        group: Quad
         type: Numeric
         read_command: QP_1:ENV_
         write_command: QP_1:ENV_
@@ -521,7 +530,7 @@ channels:
     QuadRampExit:
         name: Quad Ramp Exit Voltage
         description: Voltage at the end of the quadrupole energy ramps
-        group: Transfer
+        group: Quad
         type: NumericNoReadback
         read_command: QP_1:EXV_
         write_command: QP_1:EXV_
@@ -536,7 +545,7 @@ channels:
     QuadRampBase:
         name: Quad Base Voltage
         description: Base Voltage for the quadrupole
-        group: Transfer
+        group: Quad
         type: NumericNoReadback
         read_command: QP_1:B1V_
         write_command: QP_1:B1V_
@@ -551,7 +560,7 @@ channels:
     QuadRF:
         name: Quad RF Amplitude
         description: Peak-to-peak amplitude of the quadrupole RF
-        group: Transfer #should be Quad??
+        group: Quad
         type: Numeric
         read_command: QP_1:RFA_
         write_command: QP_1:RFA_
@@ -712,7 +721,22 @@ channels:
         min_value: 0 
         offset: None
         step_values: [1.0, 10.0, 100.0, 1000.0]
-        
+                
+    CCRF:
+        name: Collision Cell RF Amplitude (Backup)
+        description: Peak-to-peak amplitude of the collision cell RF
+        group: CC
+        type: Numeric
+        read_command: RFG3:RFA_
+        write_command: RFG3:RFA_
+        polarity: False
+        units: Vpp
+        default_value: 800
+        max_value: 2100
+        min_value: 0 
+        offset: None
+        step_values: [1.0, 10.0, 100.0, 1000.0]
+
     CCStorage:
         name: Collision Cell Storage Voltage
         description: Blocking Voltage for the Collision Cell 

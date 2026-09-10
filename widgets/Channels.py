@@ -1,4 +1,4 @@
-import CustomWidgets as cw
+import instrument_app.widgets.CustomWidgets as cw
 
 ###############################################################################
 # The generic classes
@@ -57,7 +57,7 @@ class NumericMonitor(ReadbackMixin, Channel):
     def __init__(self, name, description, group, 
                  COM, 
                  readback_command, 
-                 conversion_factor=(1,0), units=''):
+                 conversion_factor, units=''):
         super().__init__(name, description, group, 
                          COM, 
                          readback_command = readback_command, 
@@ -66,7 +66,7 @@ class NumericMonitor(ReadbackMixin, Channel):
         self.units = units
         self.conversion_factor = conversion_factor
         
-        self.gui = cw.QNumericMonitor(label_text = self.name, units = self.units)
+        self.gui = cw.QNumericMonitor(label_text = self.name, units = self.units, conversion_factor=self.conversion_factor)
 
 
 class BinaryMonitor(ReadbackMixin, Channel):

@@ -19,7 +19,7 @@ from instrument_app.app.settings_dialog import SettingsDialog
 
 # pages / services
 from instrument_app.pages.pressure_page import PressureInterlockPage
-from instrument_app.pages.bruker_control_page import BrukerControlPage
+#from instrument_app.pages.bruker_control_page import BrukerControlPage
 from instrument_app.pages.yaml_test import YamlTestPage
 from instrument_app.services.serial_manager import SerialManager
 from instrument_app.services.data_recorder import DataRecorder

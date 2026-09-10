@@ -176,7 +176,6 @@ class QNumericControl(QWidget):
         self.box.previous_value = default_value
         self.box.setValidator(QDoubleValidator(min_value, max_value, 1))
 
-<<<<<<< HEAD
     def updateReadback(self, message, value):
         if value is None:
             return
@@ -191,14 +190,6 @@ class QNumericControl(QWidget):
 
         # Check if the readback is more than 5% different than the set value
         if (self.set_value - converted_value)/max(self.set_value, 0.01) < 0.05:
-=======
-    def updateReadback(self, messagae, value):
-        converted_value = float(value)
-        self.readback.setText(value)
-
-        # Check if the readback is more than 5% different than the set value
-        if (self.set_value - converted_value)/self.set_value < 0.05:
->>>>>>> e943eaca782023ad3944d6872b2163036fa05f8d
             # Make the readback green
             self.readback.setStyleSheet('color: green;')
         else:
@@ -313,11 +304,7 @@ class QSwitchControl(QWidget):
         response = int(value)
         if response == self.value.currentIndex():
             return
-<<<<<<< HEAD
         if response in (0, 1, 2, 3, 4, 5, 6):
-=======
-        if response in (1, 2, 3, 4, 5, 6):
->>>>>>> e943eaca782023ad3944d6872b2163036fa05f8d
             self.value.setCurrentIndex(response)
         else:
             print(f"Default value not found in list of options for {self.title_label} combo box.")
@@ -331,12 +318,13 @@ class QSwitchControl(QWidget):
         
 
 class QNumericMonitor(QWidget):
-    def __init__(self, label_text="default", units="Torr", parent=None):
+    def __init__(self, conversion_factor, units, label_text="default",  parent=None):
         super().__init__(parent)
 
         # Create the subwidgets
         self.title_label = QLabel(label_text)
         self.value = QLabel()
+        self.conversion_factor = conversion_factor
         self.units = units
 
         # Set up the layout.  We want a label with the pressure text below it
@@ -347,11 +335,8 @@ class QNumericMonitor(QWidget):
         self.setLayout(layout)
 
     def updateReadback(self, message, value):
-<<<<<<< HEAD
         #print(f'in numericMonitor for {message}')
-=======
->>>>>>> e943eaca782023ad3944d6872b2163036fa05f8d
-        self.value.setText(f"{float(value)*.76:.3e} {self.units}")
+        self.value.setText(f"{float(value) * float(self.conversion_factor):.3e} {self.units}")
 
     def getActualValue(self):
         return float(self.value.text)
