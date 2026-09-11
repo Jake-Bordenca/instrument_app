@@ -1,15 +1,24 @@
-import yaml
 import time
-import instrument_app.widgets.Channels as ch
-from PyQt5.QtWidgets import (
-     QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QSizePolicy, QTabWidget, QMessageBox
-)
-from PyQt5.QtCore import QTimer, QSize
-from instrument_app.util import SerialComms
+import traceback
 
 # new imports for diagnostics/retries
 import serial.tools.list_ports
-import traceback
+import yaml
+from PyQt5.QtCore import QSize, QTimer
+from PyQt5.QtWidgets import (
+    QGridLayout,
+    QHBoxLayout,
+    QMessageBox,
+    QScrollArea,
+    QSizePolicy,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+import instrument_app.widgets.Channels as ch
+from instrument_app.util import SerialComms
+
 
 def load_config(filename="instrument_app\\config\\setup_Compact.yaml"):
     """
@@ -73,6 +82,7 @@ class YamlTestPage(QWidget):
         # Left side (no scroll)
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
+        #left_widget.setStyleSheet('background:transparent;')
         left_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # Set vertical policy
 
         # Create the channels (system widgets)
@@ -143,6 +153,7 @@ class YamlTestPage(QWidget):
 
         # tabs
         tabs = QTabWidget()
+        tabs.setDocumentMode(True)
         tabs.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         self._build_tabs()
 
@@ -163,7 +174,7 @@ class YamlTestPage(QWidget):
         def make_scrollable_tab():
             area = QScrollArea()
             widget = QWidget()
-            layout = QVBoxLayout(widget)
+            layout = QGridLayout(widget)
             widget.setLayout(layout)
             area.setWidget(widget)
             area.setWidgetResizable(True)
@@ -197,6 +208,7 @@ class YamlTestPage(QWidget):
 
         self.TofTab.setLayout(QVBoxLayout())
         self.TofTab.layout().addWidget(tof_area)
+
         self.SourceTab.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.TransferTab.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.QuadTabs.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -211,6 +223,7 @@ class YamlTestPage(QWidget):
         self.ccwidgets = []
         self.tofwidgets = []
 
+        # Populate the channels lists
         channels = config_data.get('channels', {})
         for channel, params in channels.items():
             if not isinstance(params, dict):
@@ -271,32 +284,55 @@ class YamlTestPage(QWidget):
             group = params.get('group')
             if group == 'Source':
                 self.sourcewidgets.append(widget)
-                right_layout1.addWidget(widget.gui)
+                for i in range(len(self.sourcewidgets)):
+                     row = i // 2     # Calculates: 0, 0, 1, 1, 2, 2
+                     column = i % 2    # Calculates: 0, 1, 0, 1, 0, 1
+                right_layout1.addWidget(widget.gui , row, column)
+                # row_count = right_layout1.rowCount()
+                # for i in range(row_count):
+                #     right_layout1.setRowStretch(i, 1)
+
             elif group == 'Transfer':
                 self.transferwidgets.append(widget)
-                right_layout2.addWidget(widget.gui)
+                for i in range(len(self.transferwidgets)):
+                     row = i // 2     # Calculates: 0, 0, 1, 1, 2, 2
+                     column = i % 2    # Calculates: 0, 1, 0, 1, 0, 1                
+                right_layout2.addWidget(widget.gui,  row, column)
             elif group == 'Quad':
                 self.quadwidgets.append(widget)
-                right_layout3.addWidget(widget.gui)
+                for i in range(len(self.quadwidgets)):
+                     row = i // 2     # Calculates: 0, 0, 1, 1, 2, 2
+                     column = i % 2    # Calculates: 0, 1, 0, 1, 0, 1                
+                right_layout3.addWidget(widget.gui , row, column)
             elif group == 'CC':
                 self.ccwidgets.append(widget)
-                right_layout4.addWidget(widget.gui)
+                for i in range(len(self.ccwidgets)):
+                     row = i // 2     # Calculates: 0, 0, 1, 1, 2, 2
+                     column = i % 2    # Calculates: 0, 1, 0, 1, 0, 1
+                right_layout4.addWidget(widget.gui , row, column)
             elif group == 'TOF':
                 self.tofwidgets.append(widget)
-                right_layout5.addWidget(widget.gui)
+                for i in range(len(self.tofwidgets)):
+                     row = i // 2     # Calculates: 0, 0, 1, 1, 2, 2
+                     column = i % 2    # Calculates: 0, 1, 0, 1, 0, 1                
+                right_layout5.addWidget(widget.gui , row, column)
             else:
                 continue
 
+        # Add tabs to layout
         tabs.addTab(self.SourceTab, "Source")
         tabs.addTab(self.TransferTab, "Transfer")
         tabs.addTab(self.QuadTabs, "Quad")
         tabs.addTab(self.CCTab, "CC")
         tabs.addTab(self.TofTab, "ToF")
-
+        tabs.tabBar().setExpanding(True)
+        
         self.serial_lookup = {}
         #print(self.systemwidgets)
         #print(' ')
         #print(self.channelwidgets)
+
+        # define widget commands
         for widget in self.systemwidgets + self.channelwidgets:
             if getattr(widget, "readback_command", None) is not None:
                 for cmd in widget.readback_command.split(';'):

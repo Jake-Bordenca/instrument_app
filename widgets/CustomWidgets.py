@@ -10,10 +10,21 @@ Changelog:
     090325 - Adapting for inclusion in the Channels classes
 """
 
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QProgressBar, QPushButton, QComboBox
-from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QSize
-from PyQt5.QtGui import QDoubleValidator
 from math import floor, log10
+
+from PyQt5.QtCore import QEvent, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QProgressBar,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 ###############################################################################
 # The generic widgets that serve as bases
@@ -42,7 +53,7 @@ class CustomLineEditWithArrows(QWidget):
 
         # Set up the text box
         self.text_box = QLineEdit(*args, **kwargs)
-        self.text_box.setFixedWidth(64)
+        self.text_box.setFixedWidth(100)
         self.text_box.setText(self.format_value(self.current_value))
         self.text_box.setToolTip(f"({min_value:.1f}...{max_value:.1f})")
         self.text_box.setValidator(QDoubleValidator(min_value, max_value, 1))  # Validate input as double
@@ -50,11 +61,11 @@ class CustomLineEditWithArrows(QWidget):
 
         # Create a label for the units
         self.unit_label = QLabel(self.units)
-        self.unit_label.setFixedWidth(16)
+        self.unit_label.setFixedWidth(50)
 
         # Create a label for the step size
         self.step_label = QLabel()
-        self.step_label.setFixedWidth(32)  # Ensure the label always has the same width
+        self.step_label.setFixedWidth(75)  # Ensure the label always has the same width
         self.update_step_label()  # Set the initial step value display
         
         # Set up the layout
@@ -63,7 +74,7 @@ class CustomLineEditWithArrows(QWidget):
         layout.addWidget(self.unit_label)
         layout.addWidget(self.step_label)
         self.setLayout(layout)
-        self.setFixedSize(200, 100)
+        self.setFixedSize(300, 100)
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
@@ -135,6 +146,10 @@ class CustomLineEditWithArrows(QWidget):
 ###############################################################################
 # The actual widgets
 ###############################################################################
+class HeaderLabel(QLabel):
+    """A reusable main header label."""
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
 
 class QNumericControl(QWidget):
     def __init__(self, label_text="default", 
@@ -148,13 +163,16 @@ class QNumericControl(QWidget):
         self.units = units
 
         # Create a QLabel for the title
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
+        self.title_label.setFixedWidth(400)
 
         # Create a CustomLineEditWithArrows (text box)
         self.box = CustomLineEditWithArrows(self.set_value, min_value, max_value, step_values, units = self.units)
+        self.box.setStyleSheet('background:transparent;')
 
         # Create a QLabel to display the eradback
         self.readback = QLabel()
+        self.readback.setFixedWidth(400)
 
         # Vertical layout to hold the title label and horizontal layout
         v_layout = QVBoxLayout()
@@ -165,6 +183,7 @@ class QNumericControl(QWidget):
 
         # Apply the layout
         self.setLayout(v_layout)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
         
     def setProperties(self, label_text, default_value, min_value, max_value):
@@ -216,7 +235,7 @@ class QTurboControl(QWidget):
         super().__init__(parent)
 
         # Create the subwidgets
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
         self.speed = QProgressBar()
         self.power = QLabel()
         self.switch = QPushButton(text = "START")
@@ -244,6 +263,7 @@ class QTurboControl(QWidget):
         layout.addLayout(display_layout)
         # Apply the layout
         self.setLayout(layout)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def updateReadback(self, message, value):
         # if len(response) == 1:
@@ -287,7 +307,7 @@ class QSwitchControl(QWidget):
     def __init__(self, label_text, options, default_value, parent=None):
         super().__init__(parent)
 
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
         self.options = options
         self.value = QComboBox()
         self.value.addItems(self.options)
@@ -298,7 +318,8 @@ class QSwitchControl(QWidget):
         layout.addWidget(self.title_label)
         layout.addWidget(self.value)
         self.setLayout(layout)
-        self.setFixedWidth(200)
+        self.setFixedWidth(400)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def updateSetting(self, message, value):
         response = int(value)
@@ -322,7 +343,7 @@ class QNumericMonitor(QWidget):
         super().__init__(parent)
 
         # Create the subwidgets
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
         self.value = QLabel()
         self.conversion_factor = conversion_factor
         self.units = units
@@ -333,6 +354,7 @@ class QNumericMonitor(QWidget):
         layout.addWidget(self.value)
         # Apply the layout
         self.setLayout(layout)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def updateReadback(self, message, value):
         #print(f'in numericMonitor for {message}')
@@ -340,3 +362,4 @@ class QNumericMonitor(QWidget):
 
     def getActualValue(self):
         return float(self.value.text)
+

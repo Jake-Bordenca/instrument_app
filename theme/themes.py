@@ -19,7 +19,7 @@ class Theme:
     PLOT_BG: str
 
 DARK = Theme(
-    BG="#0f1b22", BG_QSS="", TXT="#EAF2FF", TXT_STRONG="#000000",
+    BG="#0f1b22", BG_QSS="", TXT="#EAF2FF", TXT_STRONG="#FFFFFF",
     CARD_BG="#132530", CARD_BORDER="#1f3642", PLOT_FG="#7fdbff", 
     BTN_BG="#142a36", BTN_BG_DOWN="#0e2029", BTN_BORDER="#224050",
     GOOD="#2ecc71", BAD="#ff4136", GRAY="#7f8c8d", PLOT_BG="#0f1b22",
@@ -35,7 +35,7 @@ SUB_DRK = Theme(
     BG="#0b2a38",     
     BG_QSS=("qlineargradient(x1:0, y1:0, x2:0, y2:1, "
             "stop:0 #0a1a21, stop:0.45 #093340, stop:1 #0a4a5b)"),
-    TXT="white", TXT_STRONG="#000000", 
+    TXT="white", TXT_STRONG="#FFFFFF", 
     CARD_BG="#0e3b4e", CARD_BORDER="#2d6f88", PLOT_FG="#7fdbff", 
     BTN_BG="#0e3b4e", BTN_BG_DOWN="#11475e",BTN_BORDER="#2d6f88",
     GOOD="#2ecc40", BAD="#b71c1c", GRAY="#7f8c8d", PLOT_BG="#0b2a38", 

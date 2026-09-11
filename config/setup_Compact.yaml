@@ -137,15 +137,7 @@ system:
 
 
 channels:
-    ESIHVOn:
-        name: ESI HV On
-        description: HV to ESI On/Off
-        group: Source
-        type: Switch
-        read_command: ESI_:HVON
-        write_command: ESI_:HVON
-        options: ["Off", "On"]
-        default_value: "Off"
+
 
     EndPlateOffset:
         name: End Plate Offset
@@ -176,6 +168,16 @@ channels:
         min_value: -6000
         offset: None
         step_values: [1.0, 10.0, 100.0, 1000.0]
+
+    ESIHVOn:
+        name: ESI HV On
+        description: HV to ESI On/Off
+        group: Source
+        type: Switch
+        read_command: ESI_:HVON
+        write_command: ESI_:HVON
+        options: ["Off", "On"]
+        default_value: "Off"
 
     NebulizingGas:
         name: Nebulizing Gas
@@ -527,20 +529,20 @@ channels:
         offset: None
         step_values: [0.1, 1.0, 10.0, 100.0]
 
-    QuadRampExit:
-        name: Quad Ramp Exit Voltage
-        description: Voltage at the end of the quadrupole energy ramps
-        group: Quad
-        type: NumericNoReadback
-        read_command: QP_1:EXV_
-        write_command: QP_1:EXV_
-        polarity: True
-        units: V
-        default_value: 35.5
-        max_value: 300
-        min_value: -300
-        offset: None
-        step_values: [0.1, 1.0, 10.0, 100.0]
+    # QuadRampExit:
+    #     name: Quad Ramp Exit Voltage
+    #     description: Voltage at the end of the quadrupole energy ramps
+    #     group: Quad
+    #     type: NumericNoReadback
+    #     read_command: QP_1:EXV_
+    #     write_command: QP_1:EXV_
+    #     polarity: True
+    #     units: V
+    #     default_value: 35.5
+    #     max_value: 300
+    #     min_value: -300
+    #     offset: None
+    #     step_values: [0.1, 1.0, 10.0, 100.0]
 
     QuadRampBase:
         name: Quad Base Voltage
@@ -827,35 +829,35 @@ channels:
         offset: None
         step_values: [0.1, 1.0, 10.0, 100.0]
         
-    # TransferTime:
-    #     name: Collision Cell Transfer Time
-    #     description: Collision Cell Transfer Time ##fix
-    #     group: CC
-    #     type: NumericNoReadback
-    #     read_command: IFOC:P2TL
-    #     write_command: IFOC:P2TL
-    #     polarity: False
-    #     units: µs
-    #     default_value: 120
-    #     max_value: 3000
-    #     min_value: 0
-    #     offset: None
-    #     step_values: [1.0, 10.0, 100.0, 1000.0]
+    TransferTime:
+        name: Collision Cell Transfer Time
+        description: Collision Cell Transfer Time ##fix
+        group: CC
+        type: NumericNoReadback
+        read_command: IFOC:P2TL
+        write_command: IFOC:P2TL
+        polarity: False
+        units: µs
+        default_value: 120
+        max_value: 3000
+        min_value: 0
+        offset: None
+        step_values: [1.0, 10.0, 100.0, 1000.0]
         
-    # PrePulseStorageTime:
-    #     name: Pre-Pulse Storage Time
-    #     description: Pre-Pulse Storage Time ##fix
-    #     group: CC
-    #     type: NumericNoReadback
-    #     read_command: IFOC:P2TH
-    #     write_command: IFOC:P2TH
-    #     polarity: False
-    #     units: µs
-    #     default_value: 10
-    #     max_value: 3000
-    #     min_value: 0
-    #     offset: None
-    #     step_values: [1.0, 10.0, 100.0, 1000.0]
+    PrePulseStorageTime:
+        name: Pre-Pulse Storage Time
+        description: Pre-Pulse Storage Time ##fix
+        group: CC
+        type: NumericNoReadback
+        read_command: IFOC:P2TH
+        write_command: IFOC:P2TH
+        polarity: False
+        units: µs
+        default_value: 10
+        max_value: 3000
+        min_value: 0
+        offset: None
+        step_values: [1.0, 10.0, 100.0, 1000.0]
         
     CCSweepTime: ##HOW DO I DO THIS THERE ARE FOUR VALUES
         name: 

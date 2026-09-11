@@ -8,26 +8,33 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PyQt5.QtCore import Qt, QSettings
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTabWidget, QAction, QActionGroup, QMessageBox, QScrollArea
-)
 import pyqtgraph as pg
+from PyQt5.QtCore import QSettings, Qt
+from PyQt5.QtWidgets import (
+    QAction,
+    QActionGroup,
+    QApplication,
+    QMainWindow,
+    QMessageBox,
+    QScrollArea,
+    QTabBar,
+    QTabWidget,
+)
 
 # settings / dialogs
 from instrument_app.app.settings_dialog import SettingsDialog
 
 # pages / services
 from instrument_app.pages.pressure_page import PressureInterlockPage
+
 #from instrument_app.pages.bruker_control_page import BrukerControlPage
 from instrument_app.pages.yaml_test import YamlTestPage
-from instrument_app.services.serial_manager import SerialManager
 from instrument_app.services.data_recorder import DataRecorder
+from instrument_app.services.serial_manager import SerialManager
 
 # theming
 from instrument_app.theme.manager import theme_mgr
 from instrument_app.theme.themes import Theme
-
 
 APP_ORG = "JLab"
 APP_NAME = "MRI_Instrument_Control"
@@ -51,6 +58,7 @@ class MainWindow(QMainWindow):
 
         # tabs
         self.tabs = QTabWidget()
+        self.tabs.tabBar().setExpanding(True)
         self.setCentralWidget(self.tabs)
         self._build_tabs()
 
@@ -67,9 +75,11 @@ class MainWindow(QMainWindow):
         #self.bruker = BrukerControlPage()
         self.test = YamlTestPage()
 
-        self.tabs.addTab(self.pressure, "Pressures / Interlocks")
+        self.tabs.addTab(self.pressure, "Pressures")
         #self.tabs.addTab(self.bruker, "Bruker Control")
-        self.tabs.addTab(self.test, "Test")
+        self.tabs.addTab(self.test, "Voltages")
+        self.tabs.setDocumentMode(True)
+        self.tabs.tabBar().setExpanding(False)
 
     def _build_menu(self):
         mbar = self.menuBar()
@@ -103,7 +113,8 @@ class MainWindow(QMainWindow):
         """Apply theme QSS + pyqtgraph colors, then nudge pages to restyle."""
         bg_rule = t.BG_QSS or t.BG
         qss = f"""
-            QWidget {{ background:{bg_rule}; color:{t.TXT}; }}
+            QWidget {{ background:{bg_rule}; color:{t.TXT}; font: 10pt;}}
+            HeaderLabel {{color:{t.TXT_STRONG}; font:14pt; font-weight: bold;}}
 
             /* Cards, buttons, tables */
             QGroupBox {{ border:1px solid {t.CARD_BORDER}; border-radius:8px; padding:6px; }}
@@ -131,12 +142,21 @@ class MainWindow(QMainWindow):
                 top:-1px;
                 background:{t.CARD_BG};
             }}
+            QTabWidget::tab-bar {{
+                left: 5px; 
+            }}
             QTabBar::tab {{
                 background:{t.BTN_BG};
                 color:{t.TXT};
+                font:14pt;
                 border:1px solid {t.BTN_BORDER};
-                padding:6px 10px;
+                padding-left:10px;
+                padding-right: 10px;
+                padding-top: 8px;
+                padding-bottom: 12px;
                 margin-right:2px;
+                min-height:25px;
+                min-width:100px;
                 border-top-left-radius:6px;
                 border-top-right-radius:6px;
             }}
@@ -144,6 +164,8 @@ class MainWindow(QMainWindow):
                 background:{t.CARD_BG};
                 color:{t.TXT_STRONG};
                 border-bottom-color:{t.CARD_BG};
+                margin-left: -4px;
+                margin-right: -4px;
             }}
             QTabBar::tab:!selected:hover {{ background:{t.BTN_BG_DOWN}; }}
         """
