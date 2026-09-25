@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
 from instrument_app.app.settings_dialog import SettingsDialog
 
 # pages / services
-from instrument_app.pages.pressure_page import PressureInterlockPage
+from instrument_app.pages.pressure_page import PressurePage
 
 #from instrument_app.pages.bruker_control_page import BrukerControlPage
 from instrument_app.pages.yaml_test import YamlTestPage
@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
     # ------------ UI construction ------------
 
     def _build_tabs(self):
-        self.pressure = PressureInterlockPage(serial=self.serial, recorder=self.recorder)
+        self.pressure = PressurePage()
         #self.bruker = BrukerControlPage()
         self.test = YamlTestPage()
 

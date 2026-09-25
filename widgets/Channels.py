@@ -1,4 +1,19 @@
 import instrument_app.widgets.CustomWidgets as cw
+from PyQt5.QtCore import QObject, pyqtSignal
+
+###############################################################################
+# The Qt signal bus
+###############################################################################
+
+class AppChannels(QObject):
+    log = pyqtSignal(str)
+    error = pyqtSignal(str)
+    connection_changed = pyqtSignal(bool, str)
+    data_received = pyqtSignal(dict)
+    command_sent = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
 ###############################################################################
 # The generic classes
