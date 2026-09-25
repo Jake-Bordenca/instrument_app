@@ -829,35 +829,35 @@ channels:
         offset: None
         step_values: [0.1, 1.0, 10.0, 100.0]
         
-    TransferTime:
-        name: Collision Cell Transfer Time
-        description: Collision Cell Transfer Time ##fix
-        group: CC
-        type: NumericNoReadback
-        read_command: IFOC:P2TL
-        write_command: IFOC:P2TL
-        polarity: False
-        units: µs
-        default_value: 120
-        max_value: 3000
-        min_value: 0
-        offset: None
-        step_values: [1.0, 10.0, 100.0, 1000.0]
+    # TransferTime:
+    #     name: Collision Cell Transfer Time
+    #     description: Collision Cell Transfer Time ##fix
+    #     group: CC
+    #     type: NumericNoReadback
+    #     read_command: IFOC:P2TL
+    #     write_command: IFOC:P2TL
+    #     polarity: False
+    #     units: µs
+    #     default_value: 120
+    #     max_value: 3000
+    #     min_value: 0
+    #     offset: None
+    #     step_values: [1.0, 10.0, 100.0, 1000.0]
         
-    PrePulseStorageTime:
-        name: Pre-Pulse Storage Time
-        description: Pre-Pulse Storage Time ##fix
-        group: CC
-        type: NumericNoReadback
-        read_command: IFOC:P2TH
-        write_command: IFOC:P2TH
-        polarity: False
-        units: µs
-        default_value: 10
-        max_value: 3000
-        min_value: 0
-        offset: None
-        step_values: [1.0, 10.0, 100.0, 1000.0]
+    # PrePulseStorageTime:
+    #     name: Pre-Pulse Storage Time
+    #     description: Pre-Pulse Storage Time ##fix
+    #     group: CC
+    #     type: NumericNoReadback
+    #     read_command: IFOC:P2TH
+    #     write_command: IFOC:P2TH
+    #     polarity: False
+    #     units: µs
+    #     default_value: 10
+    #     max_value: 3000
+    #     min_value: 0
+    #     offset: None
+    #     step_values: [1.0, 10.0, 100.0, 1000.0]
         
     CCSweepTime: ##HOW DO I DO THIS THERE ARE FOUR VALUES
         name: 

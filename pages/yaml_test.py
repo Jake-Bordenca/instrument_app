@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 )
 
 import instrument_app.widgets.Channels as ch
-from instrument_app.util.SerialComms import SerialComms
+from instrument_app.util import SerialComms
 
 
 def load_config(filename="instrument_app\\config\\setup_Compact.yaml"):
