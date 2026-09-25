@@ -84,6 +84,8 @@ class YamlTestPage(QWidget):
         left_layout = QVBoxLayout(left_widget)
         #left_widget.setStyleSheet('background:transparent;')
         left_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # Set vertical policy
+        self.userinput = ch.UserInput()
+        left_layout.addWidget(self.userinput.gui)
 
         # Create the channels (system widgets)
         self.systemwidgets = []
@@ -143,6 +145,7 @@ class YamlTestPage(QWidget):
             # Add each widget's GUI to the layout
             for w in self.systemwidgets:
                 left_layout.addWidget(w.gui)
+
 
         # Set up the window
         self.setWindowTitle("Bruker Control")

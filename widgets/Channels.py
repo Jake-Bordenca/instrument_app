@@ -63,6 +63,18 @@ class GetMixin:
     def updateSetting(self, message, response):
         self.gui.updateSetting(message, response)
 
+class UserInput:
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            self.gui = cw.QUserInput()
+
+        def write(self, message):
+            message = user_input
+            self.COM.sendCompact(message)
+
+        def update(self, message, readback):
+            self.gui.updateReadback(message, readback)    
 
 ###############################################################################
 # The specific channel classes
@@ -188,6 +200,10 @@ class SwitchSetting(GetMixin, SetMixin, Channel):
 
     def switchChange(self, value):
         self.write(f'{value}')
+
+
+
+
 
 
 ###############################################################################

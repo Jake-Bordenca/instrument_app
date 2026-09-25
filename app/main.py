@@ -26,8 +26,6 @@ from instrument_app.app.settings_dialog import SettingsDialog
 
 # pages / services
 from instrument_app.pages.pressure_page import PressurePage
-
-#from instrument_app.pages.bruker_control_page import BrukerControlPage
 from instrument_app.pages.yaml_test import YamlTestPage
 from instrument_app.services.data_recorder import DataRecorder
 from instrument_app.services.serial_manager import SerialManager
@@ -72,11 +70,9 @@ class MainWindow(QMainWindow):
 
     def _build_tabs(self):
         self.pressure = PressurePage()
-        #self.bruker = BrukerControlPage()
         self.test = YamlTestPage()
 
         self.tabs.addTab(self.pressure, "Pressures")
-        #self.tabs.addTab(self.bruker, "Bruker Control")
         self.tabs.addTab(self.test, "Voltages")
         self.tabs.setDocumentMode(True)
         self.tabs.tabBar().setExpanding(False)

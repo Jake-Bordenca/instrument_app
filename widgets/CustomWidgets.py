@@ -173,7 +173,7 @@ class QNumericControl(QWidget):
         self.box = CustomLineEditWithArrows(self.set_value, min_value, max_value, step_values, units = self.units)
         self.box.setStyleSheet('background:transparent;')
 
-        # Create a QLabel to display the eradback
+        # Create a QLabel to display the readback
         self.readback = QLabel()
         self.readback.setFixedWidth(400)
 
@@ -303,7 +303,6 @@ class QTurboControl(QWidget):
     def getStatus(self):
         return {'Switch': 'On', 'Speed': self.speed.value, 'Power': int(self.power.text.rstrip('%'))}
 
-
 class QSwitchControl(QWidget):
     switchChanged = pyqtSignal(int)
 
@@ -340,7 +339,6 @@ class QSwitchControl(QWidget):
     def getSetValue(self):
         return self.value.currentText
         
-
 class QNumericMonitor(QWidget):
     def __init__(self, conversion_factor, units, label_text="default",  parent=None):
         super().__init__(parent)
@@ -418,7 +416,6 @@ class QGaugeDisplay(QGroupBox):
                 f"color: {style.BAD}; font-size: 24px; font-weight: bold;"
             )
 
-
 class QPumpControl(QGroupBox):
     runClicked = pyqtSignal()
     stopClicked = pyqtSignal()
@@ -488,3 +485,35 @@ class QPumpControl(QGroupBox):
                 f"padding: 3px 8px; background-color: {style.BAD}; "
                 f"color: {style.TXT_STRONG}; border-radius: 3px; font-size: 10px;"
             )
+
+class QUserInput(QWidget):
+    valueConfirmed = pyqtSignal(str)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.text_box = QLineEdit(*args, **kwargs)
+
+        self.text_box.setPlaceholderText("Enter your text here...")
+        # 3. Create a Button to capture text
+        btn = QPushButton("Submit", self)
+        btn.clicked.connect(self.get_text)
+            
+        # 4. Assemble Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.text_box)
+        layout.addWidget(btn)
+        self.readback = QLabel()
+        self.readback.setFixedWidth(400)
+        layout.addWidget(self.readback)
+        self.setLayout(layout)
+        
+    def get_text(self):
+        # 5. Retrieve text using .text()
+        user_input = self.text_box.text()
+        print(f"User typed: {user_input}")
+
+    def updateReadback(self, message, value):
+        if value is None:
+            return
+        self.readback.setText(str(value))
