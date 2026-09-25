@@ -489,31 +489,34 @@ class QPumpControl(QGroupBox):
 class QUserInput(QWidget):
     valueConfirmed = pyqtSignal(str)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, label_text="User Input", parent=None):
+        super().__init__(parent)
 
-        self.text_box = QLineEdit(*args, **kwargs)
+        self.title_label = QLabel(label_text)
+        self.text_box = QLineEdit()
+        self.text_box.setPlaceholderText("Enter serial command")
+        self.status_label = QLabel("")
+        self.readback_label = QLabel("")
 
-        self.text_box.setPlaceholderText("Enter your text here...")
-        # 3. Create a Button to capture text
-        btn = QPushButton("Submit", self)
-        btn.clicked.connect(self.get_text)
-            
-        # 4. Assemble Layout
+        self.text_box.returnPressed.connect(self.submitText)
+
         layout = QVBoxLayout()
+        layout.addWidget(self.title_label)
         layout.addWidget(self.text_box)
-        layout.addWidget(btn)
-        self.readback = QLabel()
-        self.readback.setFixedWidth(400)
-        layout.addWidget(self.readback)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.readback_label)
         self.setLayout(layout)
-        
-    def get_text(self):
-        # 5. Retrieve text using .text()
-        user_input = self.text_box.text()
-        print(f"User typed: {user_input}")
 
-    def updateReadback(self, message, value):
-        if value is None:
-            return
-        self.readback.setText(str(value))
+    def submitText(self):
+        self.textSubmitted.emit(self.text_box.text())
+
+    def clearInput(self):
+        self.text_box.clear()
+
+    def updateReadback(self, message, readback):
+        self.status_label.setText(str(message))
+        self.readback_label.setText(str(readback))
+
+    def setStatus(self, message, error=False):
+        self.status_label.setText(str(message))
+        self.status_label.setStyleSheet('color: red;' if error else 'color: green;')
