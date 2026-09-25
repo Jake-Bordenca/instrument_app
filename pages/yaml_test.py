@@ -84,7 +84,12 @@ class YamlTestPage(QWidget):
         left_layout = QVBoxLayout(left_widget)
         #left_widget.setStyleSheet('background:transparent;')
         left_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # Set vertical policy
-        self.userinput = ch.UserInput()
+        self.userinput = ch.UserInput(
+            name = "User Input", 
+            group = "User Input", 
+            description = "Description",            
+            COM = self.ser, 
+            )
         left_layout.addWidget(self.userinput.gui)
 
         # Create the channels (system widgets)

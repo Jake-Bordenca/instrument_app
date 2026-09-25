@@ -487,7 +487,7 @@ class QPumpControl(QGroupBox):
             )
 
 class QUserInput(QWidget):
-    valueConfirmed = pyqtSignal(str)
+    textSubmitted = pyqtSignal(str)
 
     def __init__(self, label_text="User Input", parent=None):
         super().__init__(parent)

@@ -1,5 +1,6 @@
 import instrument_app.widgets.CustomWidgets as cw
 from PyQt5.QtCore import QObject, pyqtSignal
+import time
 
 ###############################################################################
 # The Qt signal bus
@@ -190,8 +191,9 @@ class SwitchSetting(GetMixin, SetMixin, Channel):
         self.write(f'{value}')
 
 class UserInput(Channel):
-    def __init__(self, name, group, COM, description=''):
-        super().__init__(name, group, COM, description=description)
+    def __init__(self, name, group, description, COM):
+        super().__init__(name, group, description, COM)
+
         self.gui = cw.QUserInput(label_text=self.name)
         self.gui.textSubmitted.connect(self.write)
 
@@ -246,6 +248,11 @@ class UserInput(Channel):
         return True, text
 
     def write(self, message):
+        print("UserInput COM:", repr(self.COM))
+        print("UserInput COM type:", type(self.COM))
+        print("UserInput module:", type(self.COM).__module__)
+        print("UserInput class:", type(self.COM).__name__)
+
         command, error = self._validate_message(message)
         if error:
             self.gui.updateReadback(error, '')
