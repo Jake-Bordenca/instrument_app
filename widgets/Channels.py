@@ -120,3 +120,87 @@ class SwitchSetting(Setting):
 
     def switchChange(self, value):
         self.write(f'{value}')
+
+
+class UserInput(Channel):
+    def __init__(self, name, group, COM, description=''):
+        super().__init__(name, group, COM, description=description)
+        self.gui = cw.QUserInput(label_text=self.name)
+        self.gui.textSubmitted.connect(self.write)
+
+    @staticmethod
+    def _validate_message(message):
+        if not isinstance(message, str):
+            return None, "Input must be text."
+
+        cleaned = message.strip()
+        if cleaned == '':
+            return None, "Command cannot be blank."
+
+        if any(ch in cleaned for ch in ('@', '\r', '\n')):
+            return None, "Do not include checksum or line terminators in commands."
+
+        if any(ord(ch) < 32 or ord(ch) == 127 for ch in cleaned):
+            return None, "Command includes unsupported control characters."
+
+        try:
+            cleaned.encode('ascii')
+        except UnicodeEncodeError:
+            return None, "Command must contain ASCII characters only."
+
+        return cleaned, None
+
+    @staticmethod
+    def _format_response(response):
+        if response is None:
+            return False, "No response or protocol/checksum failure."
+
+        if isinstance(response, tuple):
+            if len(response) == 0:
+                return False, "Empty response."
+            if len(response) >= 2 and response[0] is None and response[1] is None:
+                return False, "Instrument returned an empty response."
+            payload = response[0]
+        else:
+            payload = response
+
+        if payload is None:
+            return False, "No response payload returned."
+
+        if isinstance(payload, str):
+            text = payload.strip()
+        elif isinstance(payload, list):
+            text = "; ".join(str(item) for item in payload if str(item).strip() != '')
+        else:
+            text = str(payload).strip()
+
+        if text == '':
+            return False, "Response payload is empty."
+        return True, text
+
+    def write(self, message):
+        command, error = self._validate_message(message)
+        if error:
+            self.gui.updateReadback(error, '')
+            self.gui.setStatus(error, error=True)
+            return
+
+        try:
+            response = self.COM.sendCompact(command)
+        except Exception as exc:
+            error_message = f"Serial error: {exc}"
+            self.gui.updateReadback(error_message, '')
+            self.gui.setStatus(error_message, error=True)
+            return
+
+        self.gui.clearInput()
+        success, details = self._format_response(response)
+        if success:
+            self.gui.updateReadback(f"Sent: {command}", details)
+            self.gui.setStatus("Command sent successfully.", error=False)
+        else:
+            self.gui.updateReadback(f"Sent: {command}", details)
+            self.gui.setStatus(details, error=True)
+
+    def update(self, message, readback):
+        self.gui.updateReadback(message, readback)
