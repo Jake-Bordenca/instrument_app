@@ -1,241 +1,1007 @@
+import sys
+import time
+from collections import deque
+from datetime import datetime, timedelta
+from pathlib import Path
 
-"""
-Module: instrument_app.pages.pressure_page
-Purpose: UI page for pressures/interlocks: port controls, status pills, pump controls,
-         and a time-series plot with log-Y and dynamic min↔hr X-axis.
-
-How it fits:
-- Depends on: instrument_app.services.serial_manager.SerialManager
-              instrument_app.services.data_recorder.DataRecorder
-              instrument_app.widgets.time_pressure_plot.TimePressurePlot
-              instrument_app.theme.style
-- Used by:    MainWindow (as a tab)
-
-Public API:
-- class PressureInterlockPage(QWidget)
-
-Signals / Slots:
-- Listens: SerialManager.reading, connectedChanged, status
-- Emits:   (none) — delegates TX via SerialManager.send_command()
-
-Changelog:
-- 2025-08-23 · 0.1.0 · KC · Refactored UI from legacy INT_Readout into modular page.
-"""
-
-
-from __future__ import annotations
-
-from typing import List, Optional
-
-from PyQt5.QtCore import Qt
+import numpy as np
+import pyqtgraph as pg
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton,
-    QComboBox, QFrame, QSizePolicy
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QSpinBox,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
 )
+from scipy.ndimage import uniform_filter1d
 
-from instrument_app.widgets.time_pressure_plot import TimePressurePlot
-from instrument_app.services.serial_manager import SerialManager
-from instrument_app.services.data_recorder import DataRecorder
+from instrument_app.pages.maintenance_page import MaintenanceModeDialog
+from instrument_app.services.PressureLogger import PressureLogger
+from instrument_app.theme import style, theme_mgr
+from instrument_app.util.SerialComms import ArduinoSerialComms
+from instrument_app.widgets.Channels import AppChannels
+from instrument_app.widgets.CustomWidgets import QGaugeDisplay, QPumpControl
 
-# theming
-from instrument_app.theme.manager import theme_mgr
-from instrument_app.theme.themes import Theme
-from instrument_app.theme import style  # dynamic proxy
+# Configure PyQtGraph defaults
+pg.setConfigOptions(antialias=True)
 
 
-class PressureInterlockPage(QWidget):
+class LogPressureAxisItem(pg.AxisItem):
+    """Custom axis that displays pressure values in scientific notation on a log scale.
+
+    This axis expects data to be pre-transformed to log10 values (not raw pressure).
+    It displays the tick labels as scientific notation pressure values.
     """
-    Left column: two pressure cards + two pump cards.
-    Top bar: port select + connect buttons + connection pill.
-    Right: live pressure plot + bottom controls.
-    """
-    def __init__(self, serial: SerialManager, recorder: DataRecorder):
-        super().__init__()
-        self.serial = serial
-        self.recorder = recorder
 
-        # lists for theme restyling
-        self._buttons: List[QPushButton] = []
-        self._cards: List[QFrame] = []
-        self._pills: List[QLabel] = []
-        self._labels: List[QLabel] = []
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Disable automatic SI prefix scaling
+        self.enableAutoSIPrefix(False)
+        self.setGrid(200)  # Enable grid by default
 
-        grid = QGridLayout(self)
-        grid.setContentsMargins(10,8,10,10)
-        grid.setHorizontalSpacing(12)
-        grid.setVerticalSpacing(10)
+    def tickStrings(self, values, scale, spacing):
+        """Convert log10 values back to scientific notation strings."""
+        strings = []
+        for v in values:
+            # v is log10(pressure), convert back to actual pressure
+            try:
+                pressure = 10 ** v
+                # Check if this is a "nice" power of 10 (integer exponent)
+                # or an intermediate value (2, 3, 5 multipliers)
+                exponent = int(np.floor(v))
+                mantissa = pressure / (10 ** exponent)
 
-        # --- top bar ---
-        top = QHBoxLayout(); top.setSpacing(8)
-        self.port_cb = QComboBox(); self.port_cb.setFixedHeight(36)
-        btn_refresh = self._btn("Refresh", 36, self._refresh_ports)
-        btn_connect = self._btn("Connect", 36, self._connect)
-        btn_disconnect = self._btn("Disconnect", 36, self.serial.disconnect)
-        btn_status = self._btn("STATUS", 36, lambda: self.serial.status.emit("STATUS requested"))
-        self.conn = self._pill("Connection: Not connected", ok=False, h=36)
-        top.addWidget(self.port_cb, 1)
-        top.addWidget(btn_refresh); top.addWidget(btn_connect); top.addWidget(btn_disconnect)
-        top.addStretch(1); top.addWidget(btn_status); top.addWidget(self.conn)
-        grid.addLayout(top, 0, 0, 1, 3)
+                # If mantissa is close to 1, 2, 3, or 5, show clean format
+                if abs(mantissa - round(mantissa)) < 0.01 and round(mantissa) in [1, 2, 3, 5, 10]:
+                    mantissa_int = int(round(mantissa))
+                    if mantissa_int == 1:
+                        strings.append(f"1e{exponent:+d}")
+                    elif mantissa_int == 10:
+                        strings.append(f"1e{exponent+1:+d}")
+                    else:
+                        strings.append(f"{mantissa_int}e{exponent:+d}")
+                else:
+                    # For other values, use 1 decimal precision
+                    strings.append(f"{pressure:.1e}")
+            except (OverflowError, ValueError):
+                strings.append("")
+        return strings
 
-        # --- left column (cards) ---
-        left = QVBoxLayout(); left.setSpacing(8)
-        self.card_fore, self.lbl_fore = self._pressure_card("Foreline Pressure")
-        self.card_uhv,  self.lbl_uhv  = self._pressure_card("UHV Pressure")
-        self.card_tg60, self.dot_tg60, self.btn60_run, self.btn60_stop = self._pump_card("TG60")
-        self.card_tg220,self.dot_tg220,self.btn220_run,self.btn220_stop = self._pump_card("TG220")
-        for w in (self.btn60_run, self.btn60_stop, self.btn220_run, self.btn220_stop):
-            # stubs; hook to serial when ready
-            w.clicked.connect(lambda _=False, name=w.text(): self.serial.status.emit(f"Pump: {name}"))
-        left.addWidget(self.card_fore); left.addWidget(self.card_uhv)
-        left.addWidget(self.card_tg60); left.addWidget(self.card_tg220); left.addStretch(1)
-        grid.addLayout(left, 1, 0, 3, 1)
-        grid.setColumnStretch(0, 1)
+    def tickValues(self, minVal, maxVal, size):
+        """Generate tick values at powers of 10 and intermediate points."""
+        # Handle edge cases - fall back to parent implementation if invalid
+        if not np.isfinite(minVal) or not np.isfinite(maxVal):
+            return super().tickValues(minVal, maxVal, size)
+        if minVal >= maxVal:
+            return super().tickValues(minVal, maxVal, size)
 
-        # --- plot ---
-        self.plot = TimePressurePlot()
-        grid.addWidget(self.plot, 1, 1, 2, 2)
-        grid.setColumnStretch(1, 6)
+        range_size = maxVal - minVal
+        start_exp = int(np.floor(minVal))
+        end_exp = int(np.ceil(maxVal))
 
-        # --- bottom controls (under plot) ---
-        bottom = QHBoxLayout(); bottom.setSpacing(8)
-        self.btn_view_fore = self._btn("Foreline", 34)
-        self.btn_view_uhv  = self._btn("UHV", 34)
-        self.range_cb = QComboBox(); self.range_cb.addItems(["1 min","10 min","1 hour","6 hours","24 hours"]); self.range_cb.setFixedHeight(34)
-        self.btn_reset     = self._btn("Reset View", 34, self.plot.reset_view if hasattr(self.plot, "reset_view") else None)
-        bottom.addStretch(1)
-        bottom.addWidget(self.btn_view_fore); bottom.addWidget(self.btn_view_uhv); bottom.addWidget(self.range_cb)
-        bottom.addStretch(1); bottom.addWidget(self.btn_reset)
-        grid.addLayout(bottom, 3, 1, 1, 2)
-        grid.setColumnStretch(2, 0)
+        # Sanity check - if range is unreasonable, fall back to default
+        if end_exp - start_exp > 50 or end_exp - start_exp < 0:
+            return super().tickValues(minVal, maxVal, size)
 
-        # serial signals
-        self.serial.reading.connect(self._on_reading)
-        self.serial.connectedChanged.connect(self._on_connected)
-        self.serial.status.connect(self._on_status)
+        # Limit the number of ticks to prevent performance issues
+        if end_exp - start_exp > 15:
+            # Wide range - use larger step
+            step = max(1, (end_exp - start_exp) // 8)
+            major_ticks = [float(exp) for exp in range(start_exp, end_exp + 1, step)
+                          if minVal <= exp <= maxVal]
+            return [(float(step), major_ticks)] if major_ticks else super().tickValues(minVal, maxVal, size)
 
-        # theme
-        theme_mgr.themeChanged.connect(self._apply_theme_to_self)
-        self._apply_theme_to_self(theme_mgr.current)
+        # Major ticks at each power of 10
+        major_ticks = [float(exp) for exp in range(start_exp, end_exp + 1)
+                      if minVal <= exp <= maxVal]
 
-        # initial
-        self._refresh_ports()
+        # Minor ticks at 2, 3, 5 within each decade
+        minor_ticks = []
+        for exp in range(start_exp - 1, end_exp + 1):
+            for mult in [2, 3, 5]:
+                tick_val = exp + np.log10(mult)
+                if minVal <= tick_val <= maxVal:
+                    minor_ticks.append(tick_val)
 
-    # -------------------- tiny builders --------------------
+        # For very narrow ranges (less than 1 decade), add finer ticks
+        fine_ticks = []
+        if range_size < 1.0:
+            # Add ticks at 1.5, 2.5, 3.5, 4, 4.5, 6, 7, 8, 9
+            for exp in range(start_exp - 1, end_exp + 1):
+                for mult in [1.5, 2.5, 3.5, 4, 4.5, 6, 7, 8, 9]:
+                    tick_val = exp + np.log10(mult)
+                    if minVal <= tick_val <= maxVal:
+                        fine_ticks.append(tick_val)
 
-    def _btn(self, txt: str, h: int, handler=None) -> QPushButton:
-        b = QPushButton(txt); b.setFixedHeight(h)
-        if handler: b.clicked.connect(handler)
-        self._buttons.append(b)
-        return b
+        # Return as [(spacing, [tick_values]), ...]
+        result = []
+        if major_ticks:
+            result.append((1.0, major_ticks))
+        if minor_ticks:
+            result.append((0.5, minor_ticks))
+        if fine_ticks:
+            result.append((0.2, fine_ticks))
 
-    def _pill(self, text: str, ok: bool, h: int) -> QLabel:
-        lbl = QLabel(text); lbl.setAlignment(Qt.AlignCenter); lbl.setFixedHeight(h)
-        self._pills.append(lbl)
-        return lbl
+        # Always return something - fall back to parent if we have nothing
+        return result if result else super().tickValues(minVal, maxVal, size)
 
-    def _pressure_card(self, title: str) -> tuple[QFrame, QLabel]:
-        frame = QFrame(); frame.setObjectName("card"); frame.setFixedHeight(110)
-        frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self._cards.append(frame)
-        v = QVBoxLayout(frame); v.setContentsMargins(8,8,8,8); v.setSpacing(6)
-        cap = QLabel(title); cap.setAlignment(Qt.AlignCenter); self._labels.append(cap)
-        val = QLabel("--  TORR"); val.setAlignment(Qt.AlignCenter)
-        v.addWidget(cap); v.addWidget(val, 1)
-        return frame, val
 
-    def _pump_card(self, name: str) -> tuple[QFrame, QLabel, QPushButton, QPushButton]:
-        frame = QFrame(); frame.setObjectName("card"); frame.setFixedHeight(110)
-        self._cards.append(frame)
-        v = QVBoxLayout(frame); v.setContentsMargins(8,8,8,8); v.setSpacing(6)
-        head = QHBoxLayout(); head.setSpacing(8)
-        cap = QLabel(name); cap.setAlignment(Qt.AlignCenter); self._labels.append(cap)
-        dot = QLabel(); dot.setFixedSize(14,14)
-        head.addWidget(cap); head.addStretch(1); head.addWidget(dot)
-        btnrow = QHBoxLayout(); btnrow.setSpacing(8)
-        b_run  = self._btn("RUN", 32)
-        b_stop = self._btn("STOP", 32)
-        btnrow.addWidget(b_run); btnrow.addWidget(b_stop)
-        v.addLayout(head); v.addLayout(btnrow)
-        return frame, dot, b_run, b_stop
+class PressurePage(QWidget):
+    def __init__(self, channels=None, parent=None):
+        super().__init__(parent)
+        self.channels = channels or AppChannels()
+        self.serial = ArduinoSerialComms(self.channels)
 
-    # -------------------- theme hook --------------------
+        self.connected = False
 
-    def _apply_theme_to_self(self, t: Theme):
-        # cards
-        for card in self._cards:
-            card.setStyleSheet(f"QFrame#card{{background:{t.CARD_BG}; border:1px solid {t.CARD_BORDER}; border-radius:12px;}}")
-        # labels (titles)
-        for lab in self._labels:
-            lab.setStyleSheet("font:11pt 'Segoe UI';")
-        # pressure readouts (second child in pressure cards)
-        for frame in (self.card_fore, self.card_uhv):
-            val = frame.findChildren(QLabel)[1]
-            val.setStyleSheet("font:20pt 'Consolas'; background:#000; color:#ff4136; border-radius:6px; padding:4px;")
-        # pump dots default (gray)
-        for dot in (self.dot_tg60, self.dot_tg220):
-            dot.setStyleSheet("background:#7f8c8d; border-radius:7px; border:1px solid #1b2b34;")
-        # buttons
-        for b in self._buttons:
-            b.setStyleSheet(
-                f"QPushButton{{color:{t.TXT}; background:{t.BTN_BG}; border:1px solid {t.BTN_BORDER}; "
-                f"padding:6px 10px; border-radius:8px; font:10pt 'Segoe UI';}}"
-                f"QPushButton:pressed{{background:{t.BTN_BG_DOWN};}}"
+        self.time_data = deque(maxlen=43200)
+        self.uhv_a_data = deque(maxlen=43200)
+        self.uhv_b_data = deque(maxlen=43200)
+        self.fore_a_data = deque(maxlen=43200)
+        self.fore_b_data = deque(maxlen=43200)
+        self.start_time = datetime.now()
+
+        self.time_window_hours = 3
+        self.current_graph = "uhv_a"
+
+        self.maintenance_dialog = None
+
+        # Pressure file logger for long-term storage
+        self.pressure_logger = PressureLogger()
+
+        # Chart update throttling (update every 5 seconds to prevent UI lag)
+        self._last_chart_update = 0
+        self._chart_update_interval = 5  # seconds
+
+        # Smoothed trend line settings
+        self.show_smoothed = False
+        self.smoothed_plot_item = None
+        self.show_only_smoothed = False  # When True, hide raw data and show only smoothed line
+
+        # CSV data cache for hybrid approach
+        self._csv_cache = {}
+        self._csv_cache_timestamp = None
+        self._csv_cache_validity = 300  # Cache validity in seconds (5 minutes)
+
+        self.init_ui()
+        self._connect_channels()
+
+    def _connect_channels(self):
+        self.channels.connection_changed.connect(self._on_connection_changed)
+        self.channels.data_received.connect(self._on_data_received)
+        self.channels.error.connect(self._on_error)
+
+    def init_ui(self):
+        main_layout = QVBoxLayout(self)
+
+        connection_panel = self.create_connection_panel()
+        main_layout.addWidget(connection_panel)
+
+        splitter = QSplitter(Qt.Horizontal)
+        left_panel = self.create_left_panel()
+        right_panel = self.create_chart_panel()
+        splitter.addWidget(left_panel)
+        splitter.addWidget(right_panel)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+
+        main_layout.addWidget(splitter)
+
+    def create_connection_panel(self):
+        group = QGroupBox()
+        layout = QHBoxLayout()
+
+        self.port_combo = QComboBox()
+        self.port_combo.setMinimumWidth(300)
+        self.refresh_ports()
+        layout.addWidget(self.port_combo)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.clicked.connect(self.refresh_ports)
+        refresh_btn.setStyleSheet(self._button_style())
+        layout.addWidget(refresh_btn)
+
+        self.connect_btn = QPushButton("Connect")
+        self.connect_btn.clicked.connect(self.toggle_connection)
+        self.connect_btn.setStyleSheet(self._button_style())
+        layout.addWidget(self.connect_btn)
+
+        self.disconnect_btn = QPushButton("Disconnect")
+        self.disconnect_btn.clicked.connect(self.disconnect_serial)
+        self.disconnect_btn.setEnabled(False)
+        self.disconnect_btn.setStyleSheet(self._button_style())
+        layout.addWidget(self.disconnect_btn)
+
+        layout.addStretch()
+
+        layout.addWidget(QLabel("STATUS:"))
+        self.status_label = QLabel("Not connected")
+        self.status_label.setStyleSheet(
+            f"padding: 5px 10px; background-color: {style.BTN_BG}; "
+            f"color: {style.TXT}; border-radius: 3px;"
+        )
+        layout.addWidget(self.status_label)
+
+        group.setLayout(layout)
+        group.setMaximumHeight(70)  # Prevent vertical expansion when window maximizes
+        return group
+
+    def create_left_panel(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Gauges — 2×2 grid
+        gauge_group = QGroupBox("Pressures")
+        gauge_grid = QGridLayout()
+        self.uhv_a_gauge = QGaugeDisplay("UHV-A", "0.00e+00", "TORR")
+        self.uhv_b_gauge = QGaugeDisplay("UHV-B", "0.00e+00", "TORR")
+        self.fore_a_gauge = QGaugeDisplay("Foreline-A", "0.000", "TORR")
+        self.fore_b_gauge = QGaugeDisplay("Foreline-B", "0.000", "TORR")
+        gauge_grid.addWidget(self.uhv_a_gauge,  0, 0)
+        gauge_grid.addWidget(self.uhv_b_gauge,  0, 1)
+        gauge_grid.addWidget(self.fore_a_gauge, 1, 0)
+        gauge_grid.addWidget(self.fore_b_gauge, 1, 1)
+        gauge_group.setLayout(gauge_grid)
+        layout.addWidget(gauge_group)
+
+        # Group A and Group B are fully independent pump groups (own state,
+        # own faults, own Start/Stop/Reset commands) — laid out side by side
+        # so each group's controls stay visually together. Pump widgets are
+        # status-only: there's no such thing as starting a single pump,
+        # starting/stopping is always a per-group action.
+        self.tv850ia_group = QPumpControl("TV850i-A", show_buttons=False)
+        self.tv850ib_group = QPumpControl("TV850i-B", show_buttons=False)
+        self.tv350ia_group = QPumpControl("TV350i-A", show_buttons=False)
+        self.tv350ib_group = QPumpControl("TV350i-B", show_buttons=False)
+
+        groups_layout = QHBoxLayout()
+        groups_layout.addWidget(self.create_group_panel(
+            "Group A", self.tv850ia_group, self.tv850ib_group, 'A'))
+        groups_layout.addWidget(self.create_group_panel(
+            "Group B", self.tv350ia_group, self.tv350ib_group, 'B'))
+        layout.addLayout(groups_layout)
+
+        maint_btn = QPushButton("MAINTENANCE")
+        maint_btn.setStyleSheet(
+            f"background-color: {style.BTN_BG}; color: {style.TXT_STRONG}; padding: 10px; "
+            f"font-weight: bold; border-radius: 5px; border: 1px solid {style.BTN_BORDER};"
+        )
+        maint_btn.clicked.connect(self.open_maintenance_dialog)
+        layout.addWidget(maint_btn)
+
+        layout.addStretch()
+
+        widget.setLayout(layout)
+        widget.setMaximumWidth(480)
+        return widget
+
+    def create_group_panel(self, title, pump1_widget, pump2_widget, group_char):
+        """Build one independent pump group's panel: state, faults, pump
+        status, and its own Start/Stop/Reset controls. Commands are two
+        characters — the base command plus this group's letter, e.g. 'SA'.
+        """
+        group_box = QGroupBox(title)
+        panel_layout = QVBoxLayout()
+
+        state_label = QLabel("IDLE")
+        state_label.setStyleSheet(f"color: {style.GOOD}; font-size: 13px; font-weight: bold;")
+        panel_layout.addWidget(state_label)
+
+        fault_label = QLabel("")
+        fault_label.setStyleSheet(f"color: {style.BAD}; font-size: 11px; font-weight: bold;")
+        panel_layout.addWidget(fault_label)
+
+        pump_row = QHBoxLayout()
+        pump_row.addWidget(pump1_widget)
+        pump_row.addWidget(pump2_widget)
+        panel_layout.addLayout(pump_row)
+
+        control_layout = QHBoxLayout()
+        startup_btn = QPushButton("STARTUP")
+        startup_btn.setStyleSheet(
+            f"background-color: {style.GOOD}; color: {style.TXT_STRONG}; padding: 8px; "
+            f"font-weight: bold; border-radius: 5px; border: 1px solid {style.BTN_BORDER};"
+        )
+        startup_btn.clicked.connect(lambda: self.send_command_with_feedback(f'S{group_char}', startup_btn))
+        control_layout.addWidget(startup_btn)
+
+        shutdown_btn = QPushButton("SHUTDOWN")
+        shutdown_btn.setStyleSheet(
+            f"background-color: {style.BAD}; color: {style.TXT_STRONG}; padding: 8px; "
+            f"font-weight: bold; border-radius: 5px; border: 1px solid {style.BTN_BORDER};"
+        )
+        shutdown_btn.clicked.connect(lambda: self.send_command_with_feedback(f'X{group_char}', shutdown_btn))
+        control_layout.addWidget(shutdown_btn)
+        panel_layout.addLayout(control_layout)
+
+        reset_layout = QVBoxLayout()
+        reset_hornet_btn = QPushButton("CLEAR HORNET FAULT")
+        reset_hornet_btn.setStyleSheet(
+            f"background-color: {style.BTN_BG}; color: {style.TXT}; padding: 8px; "
+            f"font-weight: bold; border-radius: 5px; border: 1px solid {style.BTN_BORDER};"
+        )
+        reset_hornet_btn.clicked.connect(lambda: self.send_command_with_feedback(f'H{group_char}', reset_hornet_btn))
+        reset_layout.addWidget(reset_hornet_btn)
+
+        reset_all_btn = QPushButton("RESET ALL")
+        reset_all_btn.setStyleSheet(
+            f"background-color: {style.BTN_BG}; color: {style.TXT}; padding: 8px; "
+            f"font-weight: bold; border-radius: 5px; border: 1px solid {style.BTN_BORDER};"
+        )
+        reset_all_btn.clicked.connect(lambda: self.send_command_with_feedback(f'R{group_char}', reset_all_btn))
+        reset_layout.addWidget(reset_all_btn)
+        panel_layout.addLayout(reset_layout)
+
+        group_box.setLayout(panel_layout)
+
+        if group_char == 'A':
+            self.state_label_a = state_label
+            self.fault_label_a = fault_label
+        else:
+            self.state_label_b = state_label
+            self.fault_label_b = fault_label
+
+        return group_box
+
+    def create_chart_panel(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Create PyQtGraph widget with time axis and custom log pressure axis
+        time_axis = pg.DateAxisItem(orientation='bottom')
+        self.pressure_axis = LogPressureAxisItem(orientation='left')
+        self.plot_widget = pg.PlotWidget(axisItems={'bottom': time_axis, 'left': self.pressure_axis})
+        self.plot_widget.setMinimumHeight(400)
+        self.plot_widget.setLabel('bottom', 'Time')
+        # Set left axis label directly on our custom axis to preserve it
+        self.pressure_axis.setLabel('Pressure (Torr)')
+
+        # Apply theme colors
+        self.plot_widget.setBackground(style.PLOT_BG)
+        plot_item = self.plot_widget.getPlotItem()
+        plot_item.getAxis('bottom').setPen(pg.mkPen(style.BTN_BORDER))
+        self.pressure_axis.setPen(pg.mkPen(style.BTN_BORDER))
+        plot_item.getAxis('bottom').setTextPen(pg.mkPen(style.TXT))
+        self.pressure_axis.setTextPen(pg.mkPen(style.TXT))
+
+        # Enable grid lines with good visibility
+        plot_item.showGrid(x=True, y=True, alpha=0.5)
+
+        plot_item.titleLabel.item.setDefaultTextColor(pg.mkColor(style.TXT))
+
+        # Enable pan/zoom
+        self.plot_widget.setMouseEnabled(x=True, y=True)
+
+        # Store reference for updates
+        self.plot_data_item = None
+
+        layout.addWidget(self.plot_widget)
+        self.update_chart()
+
+        controls_layout = QVBoxLayout()
+
+        graph_type_layout = QHBoxLayout()
+        graph_type_layout.addWidget(QLabel("Graph Type:"))
+
+        self.uhv_a_radio = QPushButton("UHV-A")
+        self.uhv_a_radio.setCheckable(True)
+        self.uhv_a_radio.setChecked(True)
+        self.uhv_a_radio.clicked.connect(lambda: self.change_graph_type("uhv_a"))
+        self.uhv_a_radio.setStyleSheet(self._toggle_style())
+        graph_type_layout.addWidget(self.uhv_a_radio)
+
+        self.uhv_b_radio = QPushButton("UHV-B")
+        self.uhv_b_radio.setCheckable(True)
+        self.uhv_b_radio.clicked.connect(lambda: self.change_graph_type("uhv_b"))
+        self.uhv_b_radio.setStyleSheet(self._toggle_style())
+        graph_type_layout.addWidget(self.uhv_b_radio)
+
+        self.fore_a_radio = QPushButton("Fore-A")
+        self.fore_a_radio.setCheckable(True)
+        self.fore_a_radio.clicked.connect(lambda: self.change_graph_type("fore_a"))
+        self.fore_a_radio.setStyleSheet(self._toggle_style())
+        graph_type_layout.addWidget(self.fore_a_radio)
+
+        self.fore_b_radio = QPushButton("Fore-B")
+        self.fore_b_radio.setCheckable(True)
+        self.fore_b_radio.clicked.connect(lambda: self.change_graph_type("fore_b"))
+        self.fore_b_radio.setStyleSheet(self._toggle_style())
+        graph_type_layout.addWidget(self.fore_b_radio)
+
+        graph_type_layout.addStretch()
+        controls_layout.addLayout(graph_type_layout)
+
+        time_window_layout = QHBoxLayout()
+        time_window_layout.addWidget(QLabel("Time Window:"))
+
+        self.time_3h_btn = QPushButton("3 Hours")
+        self.time_3h_btn.setCheckable(True)
+        self.time_3h_btn.setChecked(True)
+        self.time_3h_btn.clicked.connect(lambda: self.change_time_window(3))
+        time_window_layout.addWidget(self.time_3h_btn)
+
+        self.time_6h_btn = QPushButton("6 Hours")
+        self.time_6h_btn.setCheckable(True)
+        self.time_6h_btn.clicked.connect(lambda: self.change_time_window(6))
+        time_window_layout.addWidget(self.time_6h_btn)
+
+        self.time_12h_btn = QPushButton("12 Hours")
+        self.time_12h_btn.setCheckable(True)
+        self.time_12h_btn.clicked.connect(lambda: self.change_time_window(12))
+        time_window_layout.addWidget(self.time_12h_btn)
+
+        time_btn_style = self._toggle_style(selected_color=style.GOOD)
+        self.time_3h_btn.setStyleSheet(time_btn_style)
+        self.time_6h_btn.setStyleSheet(time_btn_style)
+        self.time_12h_btn.setStyleSheet(time_btn_style)
+
+        time_window_layout.addSpacing(20)
+
+        # Custom time window input
+        time_window_layout.addWidget(QLabel("Custom Hours:"))
+        self.custom_hours_input = QSpinBox()
+        self.custom_hours_input.setMinimum(1)
+        self.custom_hours_input.setMaximum(720)  # 30 days max
+        self.custom_hours_input.setValue(3)
+        self.custom_hours_input.setStyleSheet(
+            f"QSpinBox {{ background-color: {style.BTN_BG}; color: {style.TXT}; padding: 6px; "
+            f"border-radius: 4px; border: 1px solid {style.BTN_BORDER}; width: 60px; }}"
+            f"QSpinBox::up-button {{ width: 16px; }} QSpinBox::down-button {{ width: 16px; }}"
+        )
+        self.custom_hours_input.valueChanged.connect(self.on_custom_hours_changed)
+        time_window_layout.addWidget(self.custom_hours_input)
+
+        time_window_layout.addStretch()
+
+        # Smoothed trend line checkbox
+        self.smooth_checkbox = QCheckBox("Show Smoothed Trend")
+        self.smooth_checkbox.setChecked(False)
+        self.smooth_checkbox.stateChanged.connect(self.toggle_smoothed_line)
+        self.smooth_checkbox.setStyleSheet(
+            f"QCheckBox {{ color: {style.TXT}; padding: 8px; }}"
+            f"QCheckBox::indicator {{ width: 18px; height: 18px; }}"
+            f"QCheckBox::indicator:checked {{ background-color: {style.GOOD}; border: 1px solid {style.BTN_BORDER}; border-radius: 3px; }}"
+            f"QCheckBox::indicator:unchecked {{ background-color: {style.BTN_BG}; border: 1px solid {style.BTN_BORDER}; border-radius: 3px; }}"
+        )
+        time_window_layout.addWidget(self.smooth_checkbox)
+
+        # Smoothed only checkbox (show only smoothed line, hide raw data)
+        self.smooth_only_checkbox = QCheckBox("Smoothed Only")
+        self.smooth_only_checkbox.setChecked(False)
+        self.smooth_only_checkbox.stateChanged.connect(self.toggle_smoothed_only)
+        self.smooth_only_checkbox.setStyleSheet(
+            f"QCheckBox {{ color: {style.TXT}; padding: 8px; }}"
+            f"QCheckBox::indicator {{ width: 18px; height: 18px; }}"
+            f"QCheckBox::indicator:checked {{ background-color: {style.GOOD}; border: 1px solid {style.BTN_BORDER}; border-radius: 3px; }}"
+            f"QCheckBox::indicator:unchecked {{ background-color: {style.BTN_BG}; border: 1px solid {style.BTN_BORDER}; border-radius: 3px; }}"
+        )
+        time_window_layout.addWidget(self.smooth_only_checkbox)
+
+        reset_view_btn = QPushButton("Clear Data")
+        reset_view_btn.clicked.connect(self.reset_view)
+        reset_view_btn.setStyleSheet(
+            f"background-color: {style.BTN_BG}; color: {style.TXT_STRONG}; padding: 8px 16px; "
+            f"border-radius: 4px; border: 1px solid {style.BTN_BORDER};"
+        )
+        time_window_layout.addWidget(reset_view_btn)
+
+        controls_layout.addLayout(time_window_layout)
+        layout.addLayout(controls_layout)
+
+        widget.setLayout(layout)
+        return widget
+
+    def refresh_ports(self):
+        self.port_combo.clear()
+        for port in self.serial.refresh_ports():
+            self.port_combo.addItem(port)
+
+    def _get_csv_file_paths(self, pressure_type, start_date, end_date):
+        """Get CSV file paths for a date range. pressure_type is 'uhv' or 'foreline'."""
+        base_dir = Path(self.pressure_logger.base_dir)
+        files = []
+        current = start_date
+        while current <= end_date:
+            year_str = str(current.year)
+            month_str = f"{current.month:02d}"
+            date_str = f"{current.year}_{current.month:02d}_{current.day:02d}"
+            file_name = (f"{date_str}_UHV_Pressure.csv" if pressure_type == 'uhv'
+                         else f"{date_str}_Foreline_Pressure.csv")
+            file_path = base_dir / year_str / month_str / file_name
+            if file_path.exists():
+                files.append(file_path)
+            current += timedelta(days=1)
+        return files
+
+    def _load_csv_data(self, channel, start_time_unix, end_time_unix):
+        """Load one pressure channel from CSV files for the given time range.
+
+        Args:
+            channel: one of 'uhv_a', 'uhv_b', 'fore_a', 'fore_b'
+            start_time_unix / end_time_unix: Unix timestamps (seconds)
+
+        Returns:
+            (times_array, pressures_array) or (None, None)
+        """
+        pressure_type = self._CHANNEL_TO_PRESSURE_TYPE[channel]
+        col_idx = self._CHANNEL_TO_CSV_COL[channel]
+
+        times_list = []
+        pressures_list = []
+
+        start_date = datetime.fromtimestamp(start_time_unix).date()
+        end_date = datetime.fromtimestamp(end_time_unix).date()
+        files = self._get_csv_file_paths(pressure_type, start_date, end_date)
+
+        for file_path in files:
+            try:
+                with open(file_path, 'r') as f:
+                    lines = f.readlines()
+                for line in lines[1:]:
+                    parts = line.strip().split(',')
+                    if len(parts) > col_idx:
+                        try:
+                            unix_time = datetime.fromisoformat(parts[0]).timestamp()
+                            pressure = float(parts[col_idx])
+                            if start_time_unix <= unix_time <= end_time_unix:
+                                times_list.append(unix_time)
+                                pressures_list.append(pressure)
+                        except (ValueError, IndexError):
+                            continue
+            except (IOError, OSError):
+                continue
+
+        if times_list:
+            return np.array(times_list), np.array(pressures_list)
+        return None, None
+    
+    _CHANNEL_TO_PRESSURE_TYPE = {
+        "uhv_a": "uhv",      "uhv_b": "uhv",
+        "fore_a": "foreline", "fore_b": "foreline",
+    }
+    _CHANNEL_TO_CSV_COL = {
+        "uhv_a": 2, "uhv_b": 3,
+        "fore_a": 2, "fore_b": 3,
+    }
+
+    def _channel_deque(self, channel):
+        return {
+            "uhv_a":  self.uhv_a_data,
+            "uhv_b":  self.uhv_b_data,
+            "fore_a": self.fore_a_data,
+            "fore_b": self.fore_b_data,
+        }[channel]
+
+    def _get_data_for_window(self, channel, time_window_seconds):
+        """Get pressure data for the given time window using hybrid approach.
+
+        Args:
+            channel: one of 'uhv_a', 'uhv_b', 'fore_a', 'fore_b'
+            time_window_seconds: how many seconds back to show
+
+        Returns:
+            Tuple of (times_array, pressures_array) as numpy arrays
+        """
+        if len(self.time_data) < 2:
+            return None, None
+
+        deque_data = self._channel_deque(channel)
+        current_time = time.time()
+        deque_oldest_time = self.time_data[0]
+        deque_age_seconds = current_time - deque_oldest_time
+
+        if time_window_seconds <= deque_age_seconds:
+            times = np.array(self.time_data)
+            pressures = np.array(deque_data)
+            mask = times >= (current_time - time_window_seconds)
+            return times[mask], pressures[mask]
+
+        csv_start_time = current_time - time_window_seconds
+        csv_times, csv_pressures = self._load_csv_data(
+            channel, csv_start_time, deque_oldest_time - 1
+        )
+
+        times_list = []
+        pressures_list = []
+        if csv_times is not None:
+            times_list.extend(csv_times)
+            pressures_list.extend(csv_pressures)
+        times_list.extend(self.time_data)
+        pressures_list.extend(deque_data)
+
+        if times_list:
+            return np.array(times_list), np.array(pressures_list)
+        return None, None
+
+
+    def toggle_connection(self):
+        if self.connected:
+            return
+        port_text = self.port_combo.currentText()
+        if not port_text:
+            self.status_label.setText("No port selected")
+            return
+        port_name = port_text.split(' ')[0]
+        self.serial.open_port(port_name)
+
+    def disconnect_serial(self):
+        self.serial.close_port()
+
+    def _on_connection_changed(self, connected, port_name):
+        self.connected = connected
+        if connected:
+            self.status_label.setText("Connected")
+            self.status_label.setStyleSheet(
+                f"padding: 5px 10px; background-color: {style.GOOD}; "
+                f"color: {style.TXT_STRONG}; border-radius: 3px;"
             )
-        # pills
-        for pill in self._pills:
-            ok = "Connected" in pill.text()
-            bg = t.GOOD if ok else t.BAD
-            pill.setStyleSheet(f"QLabel{{background:{bg}; color:{t.TXT}; padding:6px 10px; border-radius:8px; font:10pt 'Segoe UI';}}")
+            self.connect_btn.setEnabled(False)
+            self.disconnect_btn.setEnabled(True)
+            # Don't clear data on reconnection - keep historical data
+            # Only clear if this is the first connection (no data yet)
+            if len(self.time_data) == 0:
+                self.start_time = datetime.now()
+        else:
+            self.status_label.setText("Not connected")
+            self.status_label.setStyleSheet(
+                f"padding: 5px 10px; background-color: {style.BTN_BG}; "
+                f"color: {style.TXT}; border-radius: 3px;"
+            )
+            self.connect_btn.setEnabled(True)
+            self.disconnect_btn.setEnabled(False)
 
-    # -------------------- serial handlers --------------------
+    def _on_error(self, message):
+        self.status_label.setText(f"Error: {message}")
+        self.status_label.setStyleSheet(
+            f"padding: 5px 10px; background-color: {style.BAD}; "
+            f"color: {style.TXT_STRONG}; border-radius: 3px;"
+        )
 
-    def _on_reading(self, r):
-        # update text
-        self.lbl_uhv.setText(f"{r.uhv_torr:.2E}  TORR" if getattr(r, "uhv_torr", None) is not None else "Sensor Off")
-        self.lbl_fore.setText(f"{r.fore_torr:.2E}  TORR" if getattr(r, "fore_torr", None) is not None else "Sensor Off")
-        # pump dots
-        self._set_dot(self.dot_tg220, getattr(r, "tg220", ""))
-        self._set_dot(self.dot_tg60,  getattr(r, "tg60",  ""))
-        # push to plot/recorder
-        if hasattr(self.plot, "append"): self.plot.append(r)
-        if hasattr(self.recorder, "append"): self.recorder.append(r)
+    def _on_data_received(self, data):
+        current_timestamp = time.time()
+        self.time_data.append(current_timestamp)
+        self.uhv_a_data.append(data["uhv_torr_a"])
+        self.uhv_b_data.append(data["uhv_torr_b"])
+        self.fore_a_data.append(data["fore_torr_a"])
+        self.fore_b_data.append(data["fore_torr_b"])
 
-    def _on_connected(self, ok: bool, tip: str):
-        self.conn.setText("Connection: Connected" if ok else "Connection: Not connected")
-        self._apply_theme_to_self(theme_mgr.current)
-        self.conn.setToolTip(tip or "")
+        elapsed_minutes = (current_timestamp - self.start_time.timestamp()) / 60.0
+        self.pressure_logger.log_pressure(
+            elapsed_minutes,
+            data["uhv_torr_a"], data["uhv_torr_b"],
+            data["fore_torr_a"], data["fore_torr_b"],
+        )
 
-    def _on_status(self, msg: str):
-        # hook for toast/log; noop for now
-        pass
+        self.update_displays(data)
 
-    # -------------------- helpers --------------------
+        now = time.time()
+        if now - self._last_chart_update >= self._chart_update_interval:
+            self.update_chart()
+            self._last_chart_update = now
 
-    def _refresh_ports(self):
-        self.port_cb.clear()
-        try:
-            ports = self.serial.available_ports()
-        except Exception:
-            ports = []
-        for p in ports:
-            desc = getattr(p, "description", "")
-            dev  = getattr(p, "device", str(p))
-            self.port_cb.addItem(f"{dev}  ({desc})", dev)
-        if not ports:
-            self.port_cb.addItem("No ports found", None)
+    def update_displays(self, data):
+        uhv_a = data["uhv_torr_a"]
+        uhv_b = data["uhv_torr_b"]
+        fore_a = data["fore_torr_a"]
+        fore_b = data["fore_torr_b"]
 
-    def _connect(self):
-        data = self.port_cb.currentData()
-        if data:
-            try: self.serial.connect(data)
-            except Exception: pass
+        self.uhv_a_gauge.set_value(f"{uhv_a:.2e}")
+        self.uhv_b_gauge.set_value(f"{uhv_b:.2e}")
 
-    def _set_dot(self, dot: QLabel, status: str):
-        s = (status or "").lower()
-        if "normal" in s: color = style.GOOD
-        elif ("fault" in s) or ("alarm" in s): color = "#ff4136"
-        else: color = style.GRAY
-        dot.setStyleSheet(f"background:{color}; border-radius:7px; border:1px solid #1b2b34;")
-        dot.setToolTip(status or "Unknown")
+        for val, gauge in ((fore_a, self.fore_a_gauge), (fore_b, self.fore_b_gauge)):
+            if val < 0.01 or val > 1000:
+                gauge.set_value(f"{val:.2e}")
+            else:
+                gauge.set_value(f"{val:.3f}")
 
+        self.uhv_a_gauge.set_status(bool(data["rel_hornet_a"]))
+        self.uhv_b_gauge.set_status(bool(data["rel_hornet_b"]))
+        self.fore_a_gauge.set_status(True)
+        self.fore_b_gauge.set_status(True)
+
+        self.state_label_a.setText(data["state_a"])
+        self.state_label_b.setText(data["state_b"])
+
+        fault_messages_a = []
+        if data["fault_hornet_a"]:
+            fault_messages_a.append("HORNET FAULT")
+        if data["fault_system_a"]:
+            fault_messages_a.append("SYSTEM FAULT")
+        self.fault_label_a.setText(" | ".join(fault_messages_a))
+
+        fault_messages_b = []
+        if data["fault_hornet_b"]:
+            fault_messages_b.append("HORNET FAULT")
+        if data["fault_system_b"]:
+            fault_messages_b.append("SYSTEM FAULT")
+        self.fault_label_b.setText(" | ".join(fault_messages_b))
+
+        # self.state_label.setText(data["state"])
+        # #faultmsg = ArduinoSerialComms._read_serial.faultmsg
+        # fault_messages = []
+        # if data["fault_hornet"]:
+        #     fault_messages.append("HORNET FAULT")
+        # if data["fault_system"]:
+        #     fault_messages.append("SYSTEM FAULT")
+        # #if faultmsg and data["fault_hornet"]| data["fault_system"]:
+        #     #fault_messages.append(faultmsg)    
+        # self.fault_label.setText(" | ".join(fault_messages))
+
+        self.tv850ia_group.set_status(data["tv850ia_ok"])
+        self.tv850ib_group.set_status(data["tv850ib_ok"])
+        self.tv350ia_group.set_status(data["tv350ia_ok"])
+        self.tv350ib_group.set_status(data["tv350ib_ok"])
+
+        if self.maintenance_dialog is not None:
+            if data["maint"]:
+                self.maintenance_dialog.enable_maint_controls()
+            else:
+                self.maintenance_dialog.disable_maint_controls()
+
+    _CHANNEL_TITLE = {
+        "uhv_a":  "UHV-A Pressure",
+        "uhv_b":  "UHV-B Pressure",
+        "fore_a": "Foreline-A Pressure",
+        "fore_b": "Foreline-B Pressure",
+    }
+    _CHANNEL_COLOR = {
+        "uhv_a": None, "uhv_b": None,    # set to style.BAD at runtime
+        "fore_a": None, "fore_b": None,   # set to style.GOOD at runtime
+    }
+
+    def update_chart(self):
+        """Update the PyQtGraph plot with current data using hybrid approach."""
+
+        if len(self.time_data) < 2:
+            self.plot_widget.setTitle("Waiting for data...")
+            if self.plot_data_item is not None:
+                self.plot_widget.removeItem(self.plot_data_item)
+                self.plot_data_item = None
+            if self.smoothed_plot_item is not None:
+                self.plot_widget.removeItem(self.smoothed_plot_item)
+                self.smoothed_plot_item = None
+            return
+
+        time_window_seconds = self.time_window_hours * 3600
+        ch = self.current_graph
+        times_filtered, data_filtered = self._get_data_for_window(ch, time_window_seconds)
+        title_text = f"{self._CHANNEL_TITLE[ch]} (Last {self.time_window_hours}h)"
+        line_color = style.BAD if ch.startswith("uhv") else style.GOOD
+
+        # Handle case where no data is available
+        if times_filtered is None or len(times_filtered) < 2:
+            self.plot_widget.setTitle("No data available")
+            if self.plot_data_item is not None:
+                self.plot_widget.removeItem(self.plot_data_item)
+                self.plot_data_item = None
+            if self.smoothed_plot_item is not None:
+                self.plot_widget.removeItem(self.smoothed_plot_item)
+                self.smoothed_plot_item = None
+            return
+
+        # Transform pressure data to log10 for proper logarithmic display
+        # Clamp minimum to avoid log(0) issues
+        data_log = np.log10(np.maximum(data_filtered, 1e-12))
+
+        # Update title
+        self.plot_widget.setTitle(title_text)
+
+        # Remove old plots if they exist
+        if self.plot_data_item is not None:
+            self.plot_widget.removeItem(self.plot_data_item)
+        if self.smoothed_plot_item is not None:
+            self.plot_widget.removeItem(self.smoothed_plot_item)
+            self.smoothed_plot_item = None
+
+        # Plot log-transformed data (raw) - but only if not showing smoothed only
+        if not self.show_only_smoothed:
+            # Plot raw data (semi-transparent if smoothed is shown)
+            if self.show_smoothed:
+                # Make raw data more transparent when smoothed line is shown
+                raw_color = pg.mkColor(line_color)
+                raw_color.setAlpha(80)  # Semi-transparent
+                pen = pg.mkPen(color=raw_color, width=1)
+            else:
+                pen = pg.mkPen(color=line_color, width=2)
+
+            self.plot_data_item = self.plot_widget.plot(
+                times_filtered,
+                data_log,
+                pen=pen
+            )
+
+        # Add smoothed trend line if enabled
+        if self.show_smoothed and len(data_log) > 10:
+            # Adaptive window size based on data points (roughly 60 samples = 1 minute at 1Hz)
+            # Use larger window for longer time ranges
+            window_size = min(max(61, len(data_log) // 50), 301)
+            # Ensure window size is odd for symmetric filtering
+            if window_size % 2 == 0:
+                window_size += 1
+
+            # Apply uniform (moving average) filter for smoothing
+            data_smoothed = uniform_filter1d(data_log, size=window_size, mode='nearest')
+
+            # Plot smoothed line with brighter color and thicker line
+            smooth_pen = pg.mkPen(color=line_color, width=3)
+            self.smoothed_plot_item = self.plot_widget.plot(
+                times_filtered,
+                data_smoothed,
+                pen=smooth_pen
+            )
+
+    def change_graph_type(self, graph_type):
+        self.current_graph = graph_type
+        for btn, key in (
+            (self.uhv_a_radio,  "uhv_a"),
+            (self.uhv_b_radio,  "uhv_b"),
+            (self.fore_a_radio, "fore_a"),
+            (self.fore_b_radio, "fore_b"),
+        ):
+            btn.setChecked(key == graph_type)
+        self.update_chart()
+
+    def change_time_window(self, hours):
+        self.time_window_hours = hours
+        self.time_3h_btn.setChecked(hours == 3)
+        self.time_6h_btn.setChecked(hours == 6)
+        self.time_12h_btn.setChecked(hours == 12)
+        # Update custom input to reflect the preset selection
+        self.custom_hours_input.blockSignals(True)
+        self.custom_hours_input.setValue(hours)
+        self.custom_hours_input.blockSignals(False)
+        self.update_chart()
+
+    def on_custom_hours_changed(self, value):
+        """Handle custom time window input changes."""
+        self.time_window_hours = value
+        # Uncheck all preset buttons when custom value is changed
+        self.time_3h_btn.setChecked(False)
+        self.time_6h_btn.setChecked(False)
+        self.time_12h_btn.setChecked(False)
+        self.update_chart()
+
+    def toggle_smoothed_line(self, state):
+        self.show_smoothed = state == Qt.Checked
+        # If unchecking smoothed trend, also uncheck smoothed only
+        if not self.show_smoothed:
+            self.smooth_only_checkbox.blockSignals(True)
+            self.smooth_only_checkbox.setChecked(False)
+            self.smooth_only_checkbox.blockSignals(False)
+            self.show_only_smoothed = False
+        self.update_chart()
+
+    def toggle_smoothed_only(self, state):
+        """Toggle showing only the smoothed line (hide raw data)."""
+        self.show_only_smoothed = state == Qt.Checked
+        # When enabling smoothed only, automatically enable smoothed trend
+        if self.show_only_smoothed:
+            self.smooth_checkbox.blockSignals(True)
+            self.smooth_checkbox.setChecked(True)
+            self.smooth_checkbox.blockSignals(False)
+            self.show_smoothed = True
+        self.update_chart()
+
+    def reset_view(self):
+        self.time_data.clear()
+        self.uhv_a_data.clear()
+        self.uhv_b_data.clear()
+        self.fore_a_data.clear()
+        self.fore_b_data.clear()
+        self.start_time = datetime.now()
+        self.update_chart()
+
+    def send_command(self, cmd):
+        self.serial.send_command(cmd)
+
+    def send_command_with_feedback(self, cmd, button):
+        """Send a command and provide visual feedback on the button."""
+        if not self.connected:
+            return
+
+        # Store original style
+        original_style = button.styleSheet()
+        original_text = button.text()
+
+        # Show "sending" state
+        button.setText(f"{original_text}...")
+        button.setStyleSheet(
+            f"background-color: #f59e0b; color: {style.TXT_STRONG}; padding: 10px; "
+            f"font-weight: bold; border-radius: 5px; border: 2px solid #fbbf24;"
+        )
+        button.setEnabled(False)
+
+        # Send the command
+        self.serial.send_command(cmd)
+
+        # Restore button after a short delay
+        def restore_button():
+            button.setText(original_text)
+            button.setStyleSheet(original_style)
+            button.setEnabled(True)
+
+        QTimer.singleShot(1000, restore_button)
+
+    def open_maintenance_dialog(self):
+        if not self.connected:
+            return
+        if self.maintenance_dialog is None:
+            self.maintenance_dialog = MaintenanceModeDialog(
+                self,
+                send_command=self.send_command,
+                is_connected=lambda: self.connected,
+            )
+        self.maintenance_dialog.show()
+        self.maintenance_dialog.raise_()
+        self.maintenance_dialog.activateWindow()
+
+    def closeEvent(self, event):
+        if self.connected:
+            self.serial.close_port()
+        if self.maintenance_dialog is not None:
+            self.maintenance_dialog.close()
+        # Close pressure log files
+        self.pressure_logger.close()
+        event.accept()
+
+    @staticmethod
+    def _button_style():
+        return (
+            f"background-color: {style.BTN_BG}; color: {style.TXT}; padding: 6px 12px; "
+            f"border-radius: 4px; border: 1px solid {style.BTN_BORDER};"
+        )
+
+    @staticmethod
+    def _toggle_style(selected_color=None):
+        active = selected_color or style.BTN_BG_DOWN
+        return (
+            f"QPushButton {{ background-color: {style.BTN_BG}; color: {style.TXT}; "
+            f"padding: 8px 16px; border-radius: 4px; border: 1px solid {style.BTN_BORDER}; }}"
+            f"QPushButton:checked {{ background-color: {active}; color: {style.TXT_STRONG}; }}"
+        )
+
+
+def _apply_theme(app, theme):
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(theme.BG))
+    palette.setColor(QPalette.WindowText, QColor(theme.TXT))
+    palette.setColor(QPalette.Base, QColor(theme.CARD_BG))
+    palette.setColor(QPalette.AlternateBase, QColor(theme.CARD_BG))
+    palette.setColor(QPalette.Text, QColor(theme.TXT))
+    palette.setColor(QPalette.Button, QColor(theme.BTN_BG))
+    palette.setColor(QPalette.ButtonText, QColor(theme.TXT))
+    palette.setColor(QPalette.Highlight, QColor(theme.GOOD))
+    palette.setColor(QPalette.HighlightedText, QColor(theme.TXT_STRONG))
+    app.setPalette(palette)
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setStyle('Fusion')
+
+    _apply_theme(app, theme_mgr.current)
+    theme_mgr.themeChanged.connect(lambda theme: _apply_theme(app, theme))
+
+    window = QMainWindow()
+    channels = AppChannels()
+    page = PressurePage(channels)
+    window.setCentralWidget(page)
+    window.setWindowTitle("Vacuum System Control")
+    window.resize(1400, 800)
+    window.show()
+
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

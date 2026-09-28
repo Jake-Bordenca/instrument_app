@@ -3,12 +3,15 @@ Built from Chris's code
 '''
 
 
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout,
-)
 from PyQt5.QtCore import QTimer
-from instrument_app.util import SerialComms
+from PyQt5.QtWidgets import (
+    QVBoxLayout,
+    QWidget,
+)
+
 import instrument_app.widgets.Channels as ch
+from instrument_app.util import SerialComms
+
 
 class BrukerControlPage(QWidget): 
     def __init__(self):
