@@ -1,0 +1,292 @@
+# Cryo control GUI setup
+# This will be read to set up the main panel of all controls
+# Changelog
+# 250912 - Began populating the channels
+# 
+# Templates for channels:
+# channels:
+#     shorthand:
+#         name: 
+#         description: 
+#         group: 
+#         type: Numeric
+#         read_command: 
+#         write_command: 
+#         polarity: True/False
+#         units: 
+#         default_value: 
+#         max_value: 
+#         min_value: 
+#         offset: 
+#         step_values: 
+#
+#     shorthand:
+#         name: 
+#         description: 
+#         group: 
+#         type: Switch
+#         read_command: 
+#         write_command: 
+#         options: 
+#         default_value: 
+#
+#
+# monitors:
+#     shorthand:
+#         name: 
+#         description: 
+#         group: 
+#         type: Numeric
+#         read_command: 
+#         conversion_factor: 
+#         units: 
+#    
+#     shorthand:
+#         name: 
+#         description: 
+#         group: 
+#         type: Binary
+#         read_command: 
+#         decoder: 
+
+
+program:
+    version: 0.0.1
+
+serial:
+    COM: COM3
+    baud: 115200
+    parity: null
+    bits: 8
+    stopbits: 1
+    handshake: null
+
+Channels:
+    Current Temp:
+        name: Current Temperature
+        description: Temperature of the Cold Tip
+        group: CryoBase
+        type: Numeric
+        read_command: TC
+        conversion_factor: 1
+        units: K
+
+    Current Power:
+        name: Current Power
+        description: Display Cooler Power as Measured by Controller
+        group: CryoBase
+        type: Numeric
+        read_command: P
+        conversion_factor: 1
+        units: W
+
+    Commanded Power:
+        name: Current Power
+        description: Display Current Commanded Power & Power Limits
+        group: CryoAdvanced
+        type: Numeric
+        read_command: E
+        conversion_factor: 1
+        units: W               
+
+    Target Temp:
+        name: Target Temperature
+        description: Target Temperature of the Cold Tip
+        group: CryoBase
+        type: Numeric
+        read_command:  SET TTARGET
+        write_command:  SET TTARGET
+        units: K      
+        default_value: 77
+        max_value: 300
+        min_value: 3
+        offset: None
+        step_values: [1.0, 10, 100]      
+
+    Target Power:
+        name: Target Power Output
+        description: Target Power Output of the Cold Tip
+        group: CryoAdvanced
+        type: Numeric
+        read_command:  SET PWOUT
+        write_command:  SET PWOUT
+        units: W      
+        default_value: 
+        max_value: 
+        min_value: 
+        offset: None
+        step_values: []           
+
+    Temp Band:
+        name: Temperature Band
+        description: Allowed Uncertainty in Temp 
+        group: CryoAdvanced
+        type: Numeric
+        read_command:  SET TBAND
+        write_command:  SET TBAND
+        units: K      
+        default_value: 0.5
+        max_value: 
+        min_value: 
+        offset: None
+        step_values: [] 
+
+    Integral Constant of Temperature Control Loop:
+        name: Integral Constant
+        description: Integral Constant of Temperature Control Loop
+        group: CryoAdvanced
+        type: Numeric
+        read_command:  SET KI
+        write_command:  SET KI
+        units:       
+        default_value: 1
+        max_value: 
+        min_value: 
+        offset: 
+        step_values: []    
+
+    Proportional Constant of Temperature Control Loop:
+        name: Proportional Constant
+        description: Proportional Constant of Temperature Control Loop
+        group: CryoAdvanced
+        type: Numeric
+        read_command:  SET KP
+        write_command:  SET KP
+        units:       
+        default_value: 50
+        max_value: 
+        min_value: 
+        offset: 
+        step_values: []     
+
+    Minimum Power:
+        name: Minimum Power Output
+        description: User-Defined Minimum Power Output
+        group: CryoSettings
+        type: Numeric
+        read_command:  SET MIN
+        write_command:  SET MIN
+        units: W      
+        default_value: 0
+        max_value: 
+        min_value: 
+        offset: None
+        step_values: []              
+
+    Maximum Power:
+        name: Maximum Power Output
+        description: User-Defined Maximum Power Output
+        group: CryoSettings
+        type: Numeric
+        read_command:  SET MAX
+        write_command:  SET MAX
+        units: W      
+        default_value: 300
+        max_value: 
+        min_value: 
+        offset: None
+        step_values: []              
+
+    Soft-Stop Mode:
+        name: Soft-Stop Control Mode
+        description:  
+        group: CryoSettings
+        type: Switch
+        read_command: SET SSTOPM
+        write_command: SET SSTOPM
+        options: ["0", "1"]
+        default_value: "0"   
+
+    Thermostat Mode:
+        name: Thermostat Control Mode
+        description:  
+        group: CryoSettings
+        type: Switch
+        read_command: SET TSTATM
+        write_command: SET TSTATM
+        options: ["0", "1"]
+        default_value: "0"   
+
+    Soft-Stop:
+        name: Soft-Stop
+        description:  
+        group: CryoSettings
+        type: Switch
+        read_command: SET SSTOP
+        write_command: SET SSTOP
+        options: ["0", "1"]
+        default_value: "0"        
+
+    Control Mode:
+        name: Control Mode
+        description:  0 = Power Control, 2 = Temp Control
+        group: CryoSettings
+        type: Switch
+        write_command: SET PID
+        read_command: SET PID
+        options: ["0", "2"]
+        default_value: "2"       
+
+    Default Control Mode:
+        name: Set New Default Control Mode
+        description:  0 = Power Control, 2 = Temp Control
+        group: CryoSettings
+        type: Switch
+        read_command: SAVE PID
+        options: ["0", "2"]
+        default_value: "2"         
+
+    State:
+        name: Operating State
+        description: Displays all state parameters
+        group: CryoSettings
+        type: Text #! Need to add this type into the code
+        read_command: STATE
+        options: []
+        default_value: 
+
+    Thermostat State:
+        name: Thermostat State
+        description:  
+        group: CryoSettings
+        type: Text \\! 
+        read_command: TSTAT
+        options: []
+        default_value: "0"                      
+
+system:
+    Type:
+        name: Display Configured Cryocooler Type
+        description: 1 = CT, 2= GT, 3= MT 
+        group: CryoSettings
+        type: Text
+        read_command: MODE
+
+    Version:
+        name: Display Cryocooler Code Version
+        description:  
+        group: CryoSettings
+        type: Text
+        read_command: VERSION        
+
+    Serial:
+        name: Display Cryocooler Serial Number
+        description:  
+        group: CryoSettings
+        type: Text
+        read_command: SERIAL        
+
+    Error:
+        name: Display Error Code
+        description:  
+        group: CryoSettings
+        type: Text
+        read_command: ERROR       
+
+    Reset to Factory Default:
+        name: Factory Reset
+        description:  
+        group: CryoSettings
+        type: Text
+        read_command: RESET=F
+        write_command: RESET=F             

@@ -1,0 +1,84 @@
+%% MRI_INT_SYS firmware state machine — per pump group
+%% Source of truth: MRI_INT_SYS/StateMachine.cpp (one StateMachine class,
+%% instantiated once per group in MRI_INT_SYS.ino as groupA/groupB).
+%%
+%% This diagram shows ONE instance's states and transitions ("x" stands for
+%% either group — read every "x" as consistently A or consistently B). The
+%% firmware instantiates this exact same class twice: once for Group A
+%% (TV850i-A + TV850i-B pumps, Foreline-A, Hornet/UHV-A) and once for Group B
+%% (TV350i-A + TV350i-B pumps, Foreline-B, Hornet/UHV-B). Neither instance
+%% ever reads or writes the other's hardware or state — a fault, start,
+%% stop, or reset on one group has zero effect on the other.
+%%
+%% MAINT is the one piece of state that is NOT per-instance — it's a single
+%% shared/global toggle that bypasses both groups' interlocks at once. It's
+%% drawn once below rather than duplicated.
+%%
+%% Edit by hand if the firmware logic changes; keep in sync with README.md §2.
+
+stateDiagram-v2
+    [*] --> WARMUP
+
+    WARMUP --> IDLE : 5s warm-up elapsed
+
+    IDLE --> START_PUMPS : 'Sx' Start
+
+    START_PUMPS --> START_PUMPS : Foreline-x still above 5 Torr, both Group x pumps held OFF
+    START_PUMPS --> WAIT_PUMPS_OK : Foreline-x at or below 5 Torr, stable 2s, both Group x pumps commanded ON
+
+    WAIT_PUMPS_OK --> RUN : both Group x pump-OK signals stable for 2s
+
+    RUN --> RUN : Hornet-x fault latches (UHV-x above 7e-4 Torr, after 5s grace) - Hornet-x OFF, Group x pumps continue
+    RUN --> RUN : 'Hx' clears Hornet-x-only fault
+
+    note right of RUN
+        Hornet-x stays energized as long as at
+        least one Group x pump is instantaneously
+        OK (single-pump degraded operation) - no
+        change to the trip threshold.
+    end note
+
+    WARMUP --> FAULT : Foreline-x above 5 Torr
+    IDLE --> FAULT : Foreline-x above 5 Torr
+    START_PUMPS --> FAULT : Foreline-x above 5 Torr
+    WAIT_PUMPS_OK --> FAULT : Foreline-x above 5 Torr
+    RUN --> FAULT : Foreline-x above 5 Torr, or either Group x pump-OK lost more than 15s
+
+    IDLE --> IDLE : 'Xx' Stop or 'Rx' Reset, no-op if no fault
+    START_PUMPS --> IDLE : 'Xx' Stop
+    WAIT_PUMPS_OK --> IDLE : 'Xx' Stop
+    RUN --> IDLE : 'Xx' Stop
+    FAULT --> IDLE : 'Xx' Stop - fault flags stay latched, 'Sx' still denied
+    FAULT --> IDLE : 'Rx' Reset all - denied if system fault and Foreline-x still above 5 Torr
+
+    note right of FAULT
+        Group x system fault: both Group x pumps
+        and Hornet-x OFF, latched. Never affects
+        the other group. Saved to EEPROM and
+        restored on reboot, independently of the
+        other group's fault state.
+    end note
+
+    IDLE --> MAINT : 'M' 'M' within 5s
+    START_PUMPS --> MAINT : 'M' 'M' within 5s
+    WAIT_PUMPS_OK --> MAINT : 'M' 'M' within 5s
+    RUN --> MAINT : 'M' 'M' within 5s
+    FAULT --> MAINT : 'M' 'M' within 5s
+
+    MAINT --> MAINT : relay command, interlocks fully bypassed for both groups
+    MAINT --> RUN : exit MAINT, Group x pumps were running
+    MAINT --> IDLE : exit MAINT, Group x pumps were off
+    MAINT --> IDLE : 10 min idle timeout, forces Group x outputs OFF
+
+    note left of MAINT
+        MAINT is the one genuinely shared/global
+        piece of state - a single toggle bypasses
+        BOTH groups' interlocks at once for manual
+        per-relay control, persisted to EEPROM so
+        it survives a serial reconnect. On exit,
+        each group independently decides whether
+        it returns to RUN or IDLE, based on
+        whether ITS OWN pumps were running - Group
+        A and Group B can land in different states
+        after the same MAINT exit.
+    end note

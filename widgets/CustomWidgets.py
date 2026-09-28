@@ -10,10 +10,24 @@ Changelog:
     090325 - Adapting for inclusion in the Channels classes
 """
 
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QProgressBar, QPushButton, QComboBox
-from PyQt5.QtCore import Qt, pyqtSignal, QEvent
-from PyQt5.QtGui import QDoubleValidator
 from math import floor, log10
+
+from PyQt5.QtCore import QEvent, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QProgressBar,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
+from instrument_app.theme import style
 
 ###############################################################################
 # The generic widgets that serve as bases
@@ -42,7 +56,7 @@ class CustomLineEditWithArrows(QWidget):
 
         # Set up the text box
         self.text_box = QLineEdit(*args, **kwargs)
-        self.text_box.setFixedWidth(64)
+        self.text_box.setFixedWidth(100)
         self.text_box.setText(self.format_value(self.current_value))
         self.text_box.setToolTip(f"({min_value:.1f}...{max_value:.1f})")
         self.text_box.setValidator(QDoubleValidator(min_value, max_value, 1))  # Validate input as double
@@ -50,11 +64,11 @@ class CustomLineEditWithArrows(QWidget):
 
         # Create a label for the units
         self.unit_label = QLabel(self.units)
-        self.unit_label.setFixedWidth(16)
+        self.unit_label.setFixedWidth(50)
 
         # Create a label for the step size
         self.step_label = QLabel()
-        self.step_label.setFixedWidth(32)  # Ensure the label always has the same width
+        self.step_label.setFixedWidth(75)  # Ensure the label always has the same width
         self.update_step_label()  # Set the initial step value display
         
         # Set up the layout
@@ -63,6 +77,7 @@ class CustomLineEditWithArrows(QWidget):
         layout.addWidget(self.unit_label)
         layout.addWidget(self.step_label)
         self.setLayout(layout)
+        self.setFixedSize(300, 100)
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
@@ -109,6 +124,10 @@ class CustomLineEditWithArrows(QWidget):
             return self.keyPressEvent(event)
         return super().eventFilter(obj, event)
 
+    def update_step_label(self):
+        step_value = self.step_values[self.current_step_index]
+        self.step_label.setText(f"±{step_value:.1f}")
+
     @property
     def value(self):
         return self.current_value
@@ -116,24 +135,12 @@ class CustomLineEditWithArrows(QWidget):
     @staticmethod
     def generate_step_values(max_value):
         step_values = []
-
-        if max_value > 0: 
-            order = floor(log10(max_value))
-            step = 10**(order - 3)
-            while step <= max_value:
-                step_values.append(step)
-                step *= 10
-            return step_values
-            
-        elif max_value==0:
-            print("Max Value = 0!")
-
-        else:
-            print("Something's wrong!")    
-
-    def update_step_label(self):
-        step_value = self.step_values[self.current_step_index]
-        self.step_label.setText(f"±{step_value:.1f}")        
+        order = floor(log10(max_value))
+        step = 10**(order - 3)
+        while step <= max_value:
+            step_values.append(step)
+            step *= 10
+        return step_values
 
     @staticmethod
     def format_value(value):
@@ -142,33 +149,45 @@ class CustomLineEditWithArrows(QWidget):
 ###############################################################################
 # The actual widgets
 ###############################################################################
+class HeaderLabel(QLabel):
+    """A reusable main header label."""
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
 
 class QNumericControl(QWidget):
     def __init__(self, label_text="default", 
                  default_value=0.0, min_value=0.0, max_value=1000.0, step_values=None, 
-                 units='', parent=None, *args, **kwargs):
+                 units='', parent=None, channel=None, *args, **kwargs):
         super().__init__(parent)
 
         # We need a variable to hold the set voltage as a float
-        self.value = default_value
+        self.set_value = default_value
+        self.actual_value = None
         self.units = units
 
         # Create a QLabel for the title
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
+        self.title_label.setFixedWidth(400)
 
         # Create a CustomLineEditWithArrows (text box)
-        self.box = CustomLineEditWithArrows(self.value, min_value, max_value, step_values, units = self.units)
+        self.box = CustomLineEditWithArrows(self.set_value, min_value, max_value, step_values, units = self.units)
+        self.box.setStyleSheet('background:transparent;')
 
-        # Create a QLabel to display the eradback
+        # Create a QLabel to display the readback
         self.readback = QLabel()
+        self.readback.setFixedWidth(400)
 
         # Vertical layout to hold the title label and horizontal layout
         v_layout = QVBoxLayout()
         v_layout.addWidget(self.title_label)
         v_layout.addWidget(self.box)
         v_layout.addWidget(self.readback)
+        v_layout.setSpacing(10)
+
         # Apply the layout
         self.setLayout(v_layout)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        
         
     def setProperties(self, label_text, default_value, min_value, max_value):
         self.title_label.setText(label_text)
@@ -179,46 +198,47 @@ class QNumericControl(QWidget):
         self.box.previous_value = default_value
         self.box.setValidator(QDoubleValidator(min_value, max_value, 1))
 
-    def updateReadback(self, response):
-        if response is None:
+    def updateReadback(self, message, value):
+        if value is None:
             return
-        self.readback.setText(response[0])
-
-        print(response[0])
-
+        #print(value)
         # Kludge, fix this later
-        if response[0].find('/') != -1:
-            return
+        # if value[0].find('/') != -1:
+        #     return
+        # elif not isinstance(value, int) and not isinstance(value, float):
+        #     value = 0.0
+        converted_value = float(value)
+        self.readback.setText(str(value))
 
         # Check if the readback is more than 5% different than the set value
-        if (self.value - float(response[0]))/max(self.value, 0.01) < 0.05:
+        if (self.set_value - converted_value)/max(self.set_value, 0.01) < 0.05:
             # Make the readback green
             self.readback.setStyleSheet('color: green;')
         else:
             # Make the readback red
             self.readback.setStyleSheet('color: red;')
 
-    def updateSetting(self, response):
-       # self.box.text_box.setText(f"{float(response[0]):.1f}")
-        if isinstance(response, str):
-            self.box.text_box.setText(response)
-        elif isinstance(response, (float , int)):
-            self.box.text_box.setText(f"{float(response[0]):.1f}")
-        else:  
-            try:
-                newresponse = str(response[0].replace("/", ","))
-                self.box.text_box.setText(newresponse)
-            except TypeError:
-                self.box.text_box.setText("Error!")
+        self.actual_value = converted_value
+
+    def updateSetting(self, message, value):
+        converted_value = float(value)
+        self.box.text_box.setText(f"{converted_value:.1f}")
+        self.set_value = converted_value
+
+    def getSetValue(self):
+        return self.set_value
+
+    def getActualValue(self):
+        return self.actual_value
 
 class QTurboControl(QWidget):
     turboSwitch = pyqtSignal(str)
 
-    def __init__(self, label_text="default", parent=None):
+    def __init__(self, label_text="default", parent=None, channel=None):
         super().__init__(parent)
 
         # Create the subwidgets
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
         self.speed = QProgressBar()
         self.power = QLabel()
         self.switch = QPushButton(text = "START")
@@ -246,43 +266,42 @@ class QTurboControl(QWidget):
         layout.addLayout(display_layout)
         # Apply the layout
         self.setLayout(layout)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-    def updateReadback(self, response):
-        if len(response) == 1:
-            onoff = response
-        elif len(response) == 3:
-            # Unpack the response
-            onoff, speed, power = response
-            # Update the speed and power displays
-            self.speed.setValue(int(speed))
-            self.power.setText(f'{power}%')
-        else:
-            print("Wrong number of responses to turbo read")
+    def updateReadback(self, message, value):
+        # if len(response) == 1:
+        #     onoff = response
+        # elif len(response) == 3:
+        #     # Unpack the response
+        #     onoff, speed, power = response
+        #     # Update the speed and power displays
+        #     self.speed.setValue(int(speed))
+        #     self.power.setText(f'{power}%')
+        # else:
+        #     print("Wrong number of responses to turbo read")
 
-        # Deal with the on/off stuff
-        if onoff == "0":
-            self.switch.text = "STOP"
-            self.switch.setStyleSheet("background-color: lightgreen;")
-        elif onoff == "1":
-            self.switch.text = "START"
-            self.switch.setStyleSheet("background-color: red;")
+        if 'ROTR' in message:
+            self.speed.setValue(int(value))
+        elif 'POWR' in message:
+            self.power.setText(f'{value}%')
+        elif 'MOSW' in message:
+            # Deal with the on/off stuff
+            if value == "0":
+                self.switch.text = "STOP"
+                self.switch.setStyleSheet("background-color: lightgreen;")
+            elif value == "1":
+                self.switch.text = "START"
+                self.switch.setStyleSheet("background-color: red;")
+            else:
+                print("Invalid response to turbo switch")
         else:
-            print("Invalid response to turbo switch")
-
-    def updateSetting(self, response):
-        # Deal with the on/off stuff
-        if response == "0":
-            self.switch.text = "STOP"
-            self.switch.setStyleSheet("background-color: lightgreen;")
-        elif response == "1":
-            self.switch.text = "START"
-            self.switch.setStyleSheet("background-color: red;")
-        else:
-            print("Invalid response to turbo switch")
+            print(f"Got an unexpected message {message} for {self.title_label.text}")
 
     def clickEvent(self, clicked):
         self.turboSwitch.emit(clicked)
 
+    def getStatus(self):
+        return {'Switch': 'On', 'Speed': self.speed.value, 'Power': int(self.power.text.rstrip('%'))}
 
 class QSwitchControl(QWidget):
     switchChanged = pyqtSignal(int)
@@ -290,37 +309,44 @@ class QSwitchControl(QWidget):
     def __init__(self, label_text, options, default_value, parent=None):
         super().__init__(parent)
 
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
         self.options = options
         self.value = QComboBox()
         self.value.addItems(self.options)
         self.value.activated.connect(self.comboEvent)
-        self.updateSetting([self.options.index(default_value)])
+        self.updateSetting(None, str(self.options.index(default_value)))
 
         layout = QVBoxLayout()
         layout.addWidget(self.title_label)
         layout.addWidget(self.value)
         self.setLayout(layout)
+        self.setFixedWidth(400)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-    def updateSetting(self, response):
-        print(response, self.options)
-        if response[0] in (1, 2, 3, 4, 5, 6):
-            self.value.setCurrentIndex(int(response[0]))
+    def updateSetting(self, message, value):
+        response = int(value)
+        if response == self.value.currentIndex():
+            return
+        if response in (0, 1, 2, 3, 4, 5, 6):
+            self.value.setCurrentIndex(response)
         else:
             print(f"Default value not found in list of options for {self.title_label} combo box.")
-        self.value.setCurrentIndex(int(response[0]))
+        #self.value.setCurrentIndex(response)
 
     def comboEvent(self, selection):
         self.switchChanged.emit(selection)
-        
 
+    def getSetValue(self):
+        return self.value.currentText
+        
 class QNumericMonitor(QWidget):
-    def __init__(self, label_text="default", units="Torr", parent=None):
+    def __init__(self, conversion_factor, units, label_text="default",  parent=None):
         super().__init__(parent)
 
         # Create the subwidgets
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
         self.value = QLabel()
+        self.conversion_factor = conversion_factor
         self.units = units
 
         # Set up the layout.  We want a label with the pressure text below it
@@ -329,6 +355,168 @@ class QNumericMonitor(QWidget):
         layout.addWidget(self.value)
         # Apply the layout
         self.setLayout(layout)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-    def updateReadback(self, response):
-        self.value.setText(f"{float(response[0])*.76:.3e} {self.units}")
+    def updateReadback(self, message, value):
+        #print(f'in numericMonitor for {message}')
+        self.value.setText(f"{float(value) * float(self.conversion_factor):.3e} {self.units}")
+
+    def getActualValue(self):
+        return float(self.value.text)
+
+class QGaugeDisplay(QGroupBox):
+    def __init__(self, title, value="0.000", unit=""):
+        super().__init__(title)
+
+        layout = QVBoxLayout()
+
+        # Create horizontal layout for value and status indicator
+        value_layout = QHBoxLayout()
+
+        self.value_label = QLabel(value)
+        self.value_label.setObjectName("value")
+        self.value_label.setStyleSheet(
+            f"color: {style.TXT_STRONG}; font-size: 28px; font-weight: bold;"
+        )
+        value_layout.addWidget(self.value_label)
+
+        # Add stretch to push status indicator to the right
+        value_layout.addStretch()
+
+        # Status indicator light
+        self.status_indicator = QLabel("●")
+        self.status_indicator.setStyleSheet(
+            f"color: {style.BAD}; font-size: 24px; font-weight: bold;"
+        )
+        value_layout.addWidget(self.status_indicator)
+        layout.addLayout(value_layout)
+
+        self.unit_label = QLabel(unit)
+        self.unit_label.setStyleSheet(
+            f"color: {style.GRAY}; font-size: 10px;"
+        )
+        layout.addWidget(self.unit_label)
+
+        self.setLayout(layout)
+
+    def set_value(self, text):
+        self.value_label.setText(text)
+
+    def set_unit(self, text):
+        self.unit_label.setText(text)
+
+    def set_status(self, energized):
+        """Set the status indicator color based on whether the gauge is energized."""
+        if energized:
+            self.status_indicator.setStyleSheet(
+                f"color: {style.GOOD}; font-size: 24px; font-weight: bold;"
+            )
+        else:
+            self.status_indicator.setStyleSheet(
+                f"color: {style.BAD}; font-size: 24px; font-weight: bold;"
+            )
+
+class QPumpControl(QGroupBox):
+    runClicked = pyqtSignal()
+    stopClicked = pyqtSignal()
+
+    def __init__(self, title, show_buttons=True):
+        super().__init__(title)
+
+        layout = QVBoxLayout()
+
+        status_layout = QHBoxLayout()
+        status_layout.addWidget(QLabel(title))
+        status_layout.addStretch()
+
+        self.status_label = QLabel("NO")
+        self.status_label.setObjectName("status")
+        status_layout.addWidget(self.status_label)
+        layout.addLayout(status_layout)
+
+        self.run_btn = None
+        self.stop_btn = None
+        if show_buttons:
+            button_layout = QHBoxLayout()
+            self.run_btn = QPushButton("RUN")
+            self.run_btn.clicked.connect(self.runClicked.emit)
+            self.run_btn.setObjectName("run")
+            button_layout.addWidget(self.run_btn)
+
+            self.stop_btn = QPushButton("STOP")
+            self.stop_btn.clicked.connect(self.stopClicked.emit)
+            self.stop_btn.setObjectName("stop")
+            button_layout.addWidget(self.stop_btn)
+            layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+        self.apply_styles()
+        self.set_status("NO")
+
+    def apply_styles(self):
+        if self.run_btn is None:
+            return
+        self.run_btn.setStyleSheet(
+            f"background-color: {style.GOOD}; color: {style.TXT_STRONG}; "
+            "padding: 8px; font-size: 11px; font-weight: bold; border-radius: 3px;"
+        )
+        self.stop_btn.setStyleSheet(
+            f"background-color: {style.BAD}; color: {style.TXT_STRONG}; "
+            "padding: 8px; font-size: 11px; font-weight: bold; border-radius: 3px;"
+        )
+
+    def set_status(self, status):
+        self.status_label.setText(status)
+        # Update button texts based on status
+        if self.run_btn is not None:
+            if status.upper() == "OK":
+                self.run_btn.setText("RUNNING")
+                self.stop_btn.setText("STOPPED")
+            else:
+                self.run_btn.setText("RUN")
+                self.stop_btn.setText("STOP")
+        if status == "OK":
+            self.status_label.setStyleSheet(
+                f"padding: 3px 8px; background-color: {style.GOOD}; "
+                f"color: {style.TXT_STRONG}; border-radius: 3px; font-size: 10px;"
+            )
+        else:
+            self.status_label.setStyleSheet(
+                f"padding: 3px 8px; background-color: {style.BAD}; "
+                f"color: {style.TXT_STRONG}; border-radius: 3px; font-size: 10px;"
+            )
+
+class QUserInput(QWidget):
+    textSubmitted = pyqtSignal(str)
+
+    def __init__(self, label_text="User Input", parent=None):
+        super().__init__(parent)
+
+        self.title_label = QLabel(label_text)
+        self.text_box = QLineEdit()
+        self.text_box.setPlaceholderText("Enter serial command")
+        self.status_label = QLabel("")
+        self.readback_label = QLabel("")
+
+        self.text_box.returnPressed.connect(self.submitText)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.text_box)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.readback_label)
+        self.setLayout(layout)
+
+    def submitText(self):
+        self.textSubmitted.emit(self.text_box.text())
+
+    def clearInput(self):
+        self.text_box.clear()
+
+    def updateReadback(self, message, readback):
+        self.status_label.setText(str(message))
+        self.readback_label.setText(str(readback))
+
+    def setStatus(self, message, error=False):
+        self.status_label.setText(str(message))
+        self.status_label.setStyleSheet('color: red;' if error else 'color: green;')
