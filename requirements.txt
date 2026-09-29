@@ -1,5 +1,15 @@
-PyQt5>=5.15.0
-pyserial>=3.5
-numpy>=1.20.0
-pyqtgraph>=0.13.0
-scipy>=1.7.0
+PyQt5>=5.15.9,<5.16
+pyqtgraph>=0.13.4,<0.14
+numpy>=2.1
+pyserial>=3.5,<4.0
+scipy>=1.13,<2.0
+
+# PicoScope SDK wrapper (psospa driver family, for the 3417E; install PicoSDK
+# drivers separately). Installed from GitHub, not PyPI: the psospa module isn't
+# in the picosdk 1.1 PyPI release yet. Pinned to a commit for reproducibility.
+picosdk @ git+https://github.com/picotech/picosdk-python-wrappers.git@3fda9bf74ff29b0f8f9e0a878c4739bdab1366a1
+
+# Analysis stack for scalable histograms
+polars>=1.6
+# pyarrow>=15   # optional: enable IPC/Parquet exports if needed
+# duckdb>=0.9   # optional: in-memory analytics for archival data

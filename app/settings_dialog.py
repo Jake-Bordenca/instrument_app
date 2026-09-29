@@ -1,22 +1,41 @@
 from __future__ import annotations
-from PyQt5.QtCore import Qt
+
+from PyQt5.QtCore import QSettings, Qt
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QCheckBox
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+)
+
+from instrument_app.services.picoscope_service import (
+    DEFAULT_RESOLUTION_BITS,
+    RESOLUTION_KEY,
+    SETTINGS_APP,
+    SETTINGS_ORG,
 )
 from instrument_app.theme.manager import theme_mgr
 
 #Depends on theme_mgr which depends on themes
 
+_RESOLUTION_CHOICES = [8, 10, 14]
+
 class SettingsDialog(QDialog):
     """
-    Minimal settings: pick theme and make it the startup default.
-    theme_mgr already persists the selected theme via QSettings.
+    App-wide settings: theme and PicoScope (3417E) resolution.
+    theme_mgr already persists the selected theme via QSettings; the scope
+    resolution setting is persisted directly to the same QSettings store
+    services.picoscope_service.PicoScopeService reads from.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setModal(True)
+
+        self._scope_settings = QSettings(SETTINGS_ORG, SETTINGS_APP)
 
         v = QVBoxLayout(self)
 
@@ -27,6 +46,18 @@ class SettingsDialog(QDialog):
         self.cb_theme.addItems(theme_mgr.available())
         self.cb_theme.setCurrentText(theme_mgr.name)
         row.addWidget(self.cb_theme, 1)
+        v.addLayout(row)
+
+        # PicoScope 3417E resolution
+        row = QHBoxLayout()
+        row.addWidget(QLabel("PicoScope resolution (bit):"))
+        self.cb_resolution = QComboBox()
+        self.cb_resolution.addItems([str(b) for b in _RESOLUTION_CHOICES])
+        current_resolution = self._scope_settings.value(
+            RESOLUTION_KEY, DEFAULT_RESOLUTION_BITS, int
+        )
+        self.cb_resolution.setCurrentText(str(current_resolution))
+        row.addWidget(self.cb_resolution, 1)
         v.addLayout(row)
 
         # Optional: “apply immediately” checkbox
@@ -55,3 +86,7 @@ class SettingsDialog(QDialog):
     def _apply_clicked(self):
         # Sets + persists to QSettings; theme_mgr emits themeChanged
         theme_mgr.set(self.cb_theme.currentText())
+
+        # Resolution takes effect on the next connect(), not live — just
+        # persist it for PicoScopeService to read.
+        self._scope_settings.setValue(RESOLUTION_KEY, int(self.cb_resolution.currentText()))
