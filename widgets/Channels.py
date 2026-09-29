@@ -247,12 +247,52 @@ class UserInput(Channel):
             return False, "Response payload is empty."
         return True, text
 
-    def write(self, message):
-        print("UserInput COM:", repr(self.COM))
-        print("UserInput COM type:", type(self.COM))
-        print("UserInput module:", type(self.COM).__module__)
-        print("UserInput class:", type(self.COM).__name__)
+    def _send_raw_command(self, command):
+        message = self.COM.getMessageCompact(command)
+        self.COM.ser.write(bytes(message, 'ascii'))
 
+        if 'HVC_' in command:
+            time.sleep(.2)
+        else:
+            time.sleep(.01)
+
+        if self.COM.ser.in_waiting <= 0:
+            return None
+
+        data = self.COM.ser.read(self.COM.ser.in_waiting)
+        data = data.replace(b'\x00', b'').replace(b'\x06', b'').strip(b'\r').split(b'\r')
+        data = [d.decode('ascii') for d in data if d]
+
+        results = []
+        responses = []
+        for d in data:
+            if "@" not in d:
+                continue
+            response, checksum = d.rsplit("@", 1)
+            checkchecksum = str(hex(self.COM.crc16(bytes(response, 'ascii'), 0, len(response))))[2:].upper()
+            while len(checkchecksum) < 4:
+                checkchecksum = "0" + checkchecksum
+            if checksum != checkchecksum:
+                continue
+
+            responses.append(response)
+            if command in response:
+                results.append(response.split(command)[-1])
+            elif "=" in response:
+                results.append(response.split("=")[-1])
+            elif "?" in response:
+                results.append(response.split("?")[-1])
+            else:
+                results.append(response)
+
+        if len(responses) > 0:
+            return results, responses
+        if len(data) > 0:
+            return data
+        else:
+            return None
+
+    def write(self, message):
         command, error = self._validate_message(message)
         if error:
             self.gui.updateReadback(error, '')
@@ -260,7 +300,8 @@ class UserInput(Channel):
             return
 
         try:
-            response = self.COM.sendCompact(command)
+            #response = self.COM.sendCompact(command)
+            response = self._send_raw_command(command)
         except Exception as exc:
             error_message = f"Serial error: {exc}"
             self.gui.updateReadback(error_message, '')
@@ -268,7 +309,7 @@ class UserInput(Channel):
             return
 
         self.gui.clearInput()
-        success, details = self._format_response(response)
+        success, details = self._format_response(response) 
         if success:
             self.gui.updateReadback(f"Sent: {command}", details)
             self.gui.setStatus("Command sent successfully.", error=False)
@@ -276,8 +317,8 @@ class UserInput(Channel):
             self.gui.updateReadback(f"Sent: {command}", details)
             self.gui.setStatus(details, error=True)
 
-    def update(self, message, readback):
-        self.gui.updateReadback(message, readback)
+    # def update(self, message, readback):
+    #     self.gui.updateReadback(message, readback)
 
 
 
