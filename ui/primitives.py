@@ -7,8 +7,8 @@ from PyQt5.QtWidgets import QPushButton, QLabel, QSpinBox, QDoubleSpinBox, QComb
 from PyQt5.QtCore import Qt
 
 from .mixins import ThemedMixin
-from app3417.theme.manager import theme_mgr
-from app3417.theme.themes import Theme
+from instrument_app.theme.manager import theme_mgr
+from instrument_app.theme.themes import Theme
 
 
 class ThemedButton(ThemedMixin, QPushButton):

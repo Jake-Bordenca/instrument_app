@@ -1,7 +1,7 @@
-"""Reusable themed UI components for app3417.
+"""Reusable themed UI components for instrument_app.
 
 This package exposes a small set of building blocks that subscribe to
-:mod:`app3417.theme.manager.theme_mgr` and restyle themselves when
+:mod:`instrument_app.theme.manager.theme_mgr` and restyle themselves when
 themes change.  Widgets are intentionally light-weight so that pages can
 compose them without pulling in application logic.
 """

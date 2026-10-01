@@ -1,13 +1,13 @@
 
 """
-Module: app3417.ui.plots
+Module: instrument_app.ui.plots
 Purpose: Reusable pyqtgraph plot widget for pressure vs. time (log-Y), with:
          - dynamic bottom axis (minutes↔hours),
          - crosshair + hover readout,
          - RMB rubber-band zoom.
 
 How it fits:
-- Depends on: pyqtgraph, app3417.theme.style, app3417.services.parsing.Reading
+- Depends on: pyqtgraph, instrument_app.theme.style, instrument_app.services.parsing.Reading
 - Used by:    PressureInterlockPage
 
 Public API:
@@ -28,10 +28,10 @@ from PyQt5.QtCore import Qt, QEvent
 import pyqtgraph as pg
 import math, bisect
 
-from app3417.theme import style
-from app3417.theme.manager import theme_mgr
-from app3417.theme.themes import Theme
-from app3417.services.parsing import Reading
+from instrument_app.theme import style
+from instrument_app.theme.manager import theme_mgr
+from instrument_app.theme.themes import Theme
+from instrument_app.services.parsing import Reading
 
 
 class DynamicMinuteHourAxis(pg.AxisItem):

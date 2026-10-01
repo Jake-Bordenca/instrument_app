@@ -19,10 +19,10 @@ from typing import Dict
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from app3417.services.picoscope_service import PicoScopeService
-from app3417.services.daq_models import RatemeterConfig
-from app3417.services.waveform_processor import WaveformProcessor
-from app3417.services.signal_extractor import SignalExtractor
+from instrument_app.services.picoscope_service import PicoScopeService
+from instrument_app.services.daq_models import RatemeterConfig
+from instrument_app.services.waveform_processor import WaveformProcessor
+from instrument_app.services.signal_extractor import SignalExtractor
 
 
 class RatemeterWorker(QThread):

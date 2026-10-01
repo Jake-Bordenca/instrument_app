@@ -492,11 +492,14 @@ class QUserInput(QWidget):
     def __init__(self, label_text="User Input", parent=None):
         super().__init__(parent)
 
-        self.title_label = QLabel(label_text)
+        self.title_label = HeaderLabel(label_text)
         self.text_box = QLineEdit()
         self.text_box.setPlaceholderText("Enter serial command")
         self.status_label = QLabel("")
         self.readback_label = QLabel("")
+
+        self.status_label.setStyleSheet('background:transparent;')
+        self.readback_label.setStyleSheet('background:transparent;')
 
         self.text_box.returnPressed.connect(self.submitText)
 

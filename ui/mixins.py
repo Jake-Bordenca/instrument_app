@@ -1,8 +1,8 @@
 """Mixin utilities for themed widgets."""
 from __future__ import annotations
 
-from app3417.theme.manager import theme_mgr
-from app3417.theme.themes import Theme
+from instrument_app.theme.manager import theme_mgr
+from instrument_app.theme.themes import Theme
 
 
 class ThemedMixin:
@@ -24,6 +24,6 @@ class ThemedMixin:
 
         Subclasses override this method to set widget-specific style sheets or
         palette properties.  ``Theme`` is a frozen dataclass with color tokens
-        defined in :mod:`app3417.theme.themes`.
+        defined in :mod:`instrument_app.theme.themes`.
         """
         raise NotImplementedError

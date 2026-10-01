@@ -17,7 +17,7 @@ from typing import List, Optional
 import numpy as np
 from scipy.signal import find_peaks
 
-from app3417.services.daq_models import PeakRecord
+from instrument_app.services.daq_models import PeakRecord
 
 
 class SignalExtractor:

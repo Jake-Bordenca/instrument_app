@@ -17,7 +17,7 @@ from typing import Tuple
 
 import numpy as np
 
-from app3417.services.daq_models import AcquisitionConfig, WaveformRecord
+from instrument_app.services.daq_models import AcquisitionConfig, WaveformRecord
 
 
 # ---------------------------------------------------------------------------

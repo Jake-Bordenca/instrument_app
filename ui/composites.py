@@ -27,7 +27,7 @@ from .primitives import (
     NoScrollDoubleSpinBox as QDoubleSpinBox,
     NoScrollSpinBox as QSpinBox,
 )
-from app3417.theme.themes import Theme
+from instrument_app.theme.themes import Theme
 
 
 class PressureCard(QFrame, ThemedMixin):
