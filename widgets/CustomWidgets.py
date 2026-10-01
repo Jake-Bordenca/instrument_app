@@ -411,7 +411,7 @@ class QGaugeDisplay(QGroupBox):
         self.value_label = QLabel(value)
         self.value_label.setObjectName("value")
         self.value_label.setStyleSheet(
-            f"color: {style.TXT_STRONG}; font-size: 28px; font-weight: bold;"
+            f"color: {style.TXT_STRONG}; font-size: 28px; font-weight: bold; background:transparent;"
         )
         value_layout.addWidget(self.value_label)
 
@@ -421,7 +421,7 @@ class QGaugeDisplay(QGroupBox):
         # Status indicator light
         self.status_indicator = QLabel("●")
         self.status_indicator.setStyleSheet(
-            f"color: {style.BAD}; font-size: 24px; font-weight: bold;"
+            f"color: {style.BAD}; font-size: 24px; font-weight: bold; background:transparent;"
         )
         value_layout.addWidget(self.status_indicator)
         layout.addLayout(value_layout)
@@ -431,6 +431,7 @@ class QGaugeDisplay(QGroupBox):
             f"color: {style.GRAY}; font-size: 10px;"
         )
         layout.addWidget(self.unit_label)
+        self.unit_label.setStyleSheet('background:transparent;')
 
         self.setLayout(layout)
 
@@ -444,11 +445,11 @@ class QGaugeDisplay(QGroupBox):
         """Set the status indicator color based on whether the gauge is energized."""
         if energized:
             self.status_indicator.setStyleSheet(
-                f"color: {style.GOOD}; font-size: 24px; font-weight: bold;"
+                f"color: {style.GOOD}; font-size: 24px; font-weight: bold; background:transparent;"
             )
         else:
             self.status_indicator.setStyleSheet(
-                f"color: {style.BAD}; font-size: 24px; font-weight: bold;"
+                f"color: {style.BAD}; font-size: 24px; font-weight: bold; background:transparent;"
             )
 
 class QPumpControl(QGroupBox):
@@ -461,11 +462,15 @@ class QPumpControl(QGroupBox):
         layout = QVBoxLayout()
 
         status_layout = QHBoxLayout()
-        status_layout.addWidget(QLabel(title))
+
+        self.title_label = QLabel(title)
+        status_layout.addWidget(self.title_label)
+        self.title_label.setStyleSheet("background:transparent;")
         status_layout.addStretch()
 
         self.status_label = QLabel("NO")
         self.status_label.setObjectName("status")
+        self.status_label.setStyleSheet("background:transparent;")
         status_layout.addWidget(self.status_label)
         layout.addLayout(status_layout)
 
@@ -557,4 +562,4 @@ class QUserInput(QWidget):
 
     def setStatus(self, message, error=False):
         self.status_label.setText(str(message))
-        self.status_label.setStyleSheet('color: red;' if error else 'color: green;')
+        self.status_label.setStyleSheet('color: red;' if error else 'color: green; background:transparent;')

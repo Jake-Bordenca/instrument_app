@@ -223,8 +223,9 @@ class PressurePage(QWidget):
         layout.addWidget(self.disconnect_btn)
 
         layout.addStretch()
-
-        layout.addWidget(QLabel("STATUS:"))
+        self.status_title = QLabel("STATUS:")
+        layout.addWidget(self.status_title)
+        self.status_title.setStyleSheet("background:transparent;")
         self.status_label = QLabel("Not connected")
         self.status_label.setStyleSheet(
             f"padding: 5px 10px; background-color: {style.BTN_BG}; "
@@ -282,7 +283,7 @@ class PressurePage(QWidget):
         layout.addStretch()
 
         widget.setLayout(layout)
-        widget.setMaximumWidth(480)
+        widget.setMaximumWidth(650)
         return widget
 
     def create_group_panel(self, title, pump1_widget, pump2_widget, group_char):
@@ -294,11 +295,11 @@ class PressurePage(QWidget):
         panel_layout = QVBoxLayout()
 
         state_label = QLabel("IDLE")
-        state_label.setStyleSheet(f"color: {style.GOOD}; font-size: 13px; font-weight: bold;")
+        state_label.setStyleSheet(f"color: {style.GOOD}; font-size: 13px; font-weight: bold; background:transparent;")
         panel_layout.addWidget(state_label)
 
         fault_label = QLabel("")
-        fault_label.setStyleSheet(f"color: {style.BAD}; font-size: 11px; font-weight: bold;")
+        fault_label.setStyleSheet(f"color: {style.BAD}; font-size: 11px; font-weight: bold; background:transparent;")
         panel_layout.addWidget(fault_label)
 
         pump_row = QHBoxLayout()

@@ -118,6 +118,7 @@ class MainWindow(QMainWindow):
 
             /* Cards, buttons, tables */
             QGroupBox {{ border:1px solid {t.CARD_BORDER}; border-radius:8px; padding:6px; }}
+            QGroupBox::title {{background:transparent;}}
             QPushButton {{
                 color:{t.TXT}; background:{t.BTN_BG}; border:1px solid {t.BTN_BORDER};
                 padding:6px 10px; border-radius:8px; font:10pt 'Segoe UI';
