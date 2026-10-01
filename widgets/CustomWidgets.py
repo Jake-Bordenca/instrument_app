@@ -231,6 +231,41 @@ class QNumericControl(QWidget):
     def getActualValue(self):
         return self.actual_value
 
+class QUserInput(QWidget):
+    textSubmitted = pyqtSignal(str)
+
+    def __init__(self, label_text="User Input", parent=None):
+        super().__init__(parent)
+
+        self.title_label = QLabel(label_text)
+        self.text_box = QLineEdit()
+        self.text_box.setPlaceholderText("Enter serial command")
+        self.status_label = QLabel("")
+        self.readback_label = QLabel("")
+
+        self.text_box.returnPressed.connect(self.submitText)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.text_box)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.readback_label)
+        self.setLayout(layout)
+
+    def submitText(self):
+        self.textSubmitted.emit(self.text_box.text())
+
+    def clearInput(self):
+        self.text_box.clear()
+
+    def updateReadback(self, message, readback):
+        self.status_label.setText(str(message))
+        self.readback_label.setText(str(readback))
+
+    def setStatus(self, message, error=False):
+        self.status_label.setText(str(message))
+        self.status_label.setStyleSheet('color: red;' if error else 'color: green;')
+
 class QTurboControl(QWidget):
     turboSwitch = pyqtSignal(str)
 

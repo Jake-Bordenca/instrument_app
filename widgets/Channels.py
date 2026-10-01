@@ -1,3 +1,5 @@
+import time
+
 import instrument_app.widgets.CustomWidgets as cw
 from PyQt5.QtCore import QObject, pyqtSignal
 import time
@@ -276,12 +278,10 @@ class UserInput(Channel):
                 continue
 
             responses.append(response)
-            if command in response:
-                results.append(response.split(command)[-1])
+            if "?" in response:
+                results.append(response.split("?")[-1])
             elif "=" in response:
                 results.append(response.split("=")[-1])
-            elif "?" in response:
-                results.append(response.split("?")[-1])
             else:
                 results.append(response)
 
@@ -289,8 +289,7 @@ class UserInput(Channel):
             return results, responses
         if len(data) > 0:
             return data
-        else:
-            return None
+        return None
 
     def write(self, message):
         command, error = self._validate_message(message)
@@ -300,7 +299,6 @@ class UserInput(Channel):
             return
 
         try:
-            #response = self.COM.sendCompact(command)
             response = self._send_raw_command(command)
         except Exception as exc:
             error_message = f"Serial error: {exc}"
