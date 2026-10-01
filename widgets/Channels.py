@@ -249,6 +249,64 @@ class UserInput(Channel):
             return False, "Response payload is empty."
         return True, text
 
+    @staticmethod
+    def _split_user_commands(command):
+        return [part.strip() for part in command.split(';') if part.strip() != '']
+
+    @staticmethod
+    def _response_key_and_value(response):
+        raw = str(response).strip()
+        if "@" in raw:
+            raw = raw.rsplit("@", 1)[0]
+
+        for separator in ('?', '=', '$'):
+            if separator in raw:
+                message, value = raw.split(separator, 1)
+                return message + separator, value, raw
+
+        return raw, raw, raw
+
+    @staticmethod
+    def _expected_response_keys(command):
+        command = command.strip()
+        if command == '':
+            return set()
+
+        if '=' in command:
+            return {command.split('=', 1)[0] + '='}
+
+        if '?' in command:
+            base = command.split('?', 1)[0]
+            return {base + '?', base + '='}
+
+        if '$' in command:
+            return {command.split('$', 1)[0] + '$'}
+
+        return {command}
+
+    @classmethod
+    def _filter_user_input_responses(cls, command, responses):
+        response_items = []
+        for response in responses:
+            key, value, normalized = cls._response_key_and_value(response)
+            response_items.append((key, value, normalized))
+
+        filtered_values = []
+        filtered_responses = []
+
+        for subcommand in cls._split_user_commands(command):
+            expected_keys = cls._expected_response_keys(subcommand)
+            if len(expected_keys) == 0:
+                continue
+
+            matches = [item for item in response_items if item[0] in expected_keys]
+            for item in matches:
+                filtered_values.append(item[1])
+                filtered_responses.append(item[2])
+                response_items.remove(item)
+
+        return filtered_values, filtered_responses
+
     def _send_raw_command(self, command):
         message = self.COM.getMessageCompact(command)
         self.COM.ser.write(bytes(message, 'ascii'))
@@ -265,7 +323,6 @@ class UserInput(Channel):
         data = data.replace(b'\x00', b'').replace(b'\x06', b'').strip(b'\r').split(b'\r')
         data = [d.decode('ascii') for d in data if d]
 
-        results = []
         responses = []
         for d in data:
             if "@" not in d:
@@ -278,14 +335,9 @@ class UserInput(Channel):
                 continue
 
             responses.append(response)
-            if "?" in response:
-                results.append(response.split("?")[-1])
-            elif "=" in response:
-                results.append(response.split("=")[-1])
-            else:
-                results.append(response)
 
         if len(responses) > 0:
+            results, responses = self._filter_user_input_responses(command, responses)
             return results, responses
         if len(data) > 0:
             return data
